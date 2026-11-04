@@ -11,7 +11,7 @@ test("inicio de sesión correcto lleva a Mi día", async ({ page }) => {
 
 test("clave incorrecta muestra un error claro", async ({ page }) => {
   await iniciarSesion(page, "gerencia@andamar.test", "clave-incorrecta-123");
-  await expect(page.getByRole("alert")).toContainText("Correo o contraseña incorrectos");
+  await expect(page.locator("#error-login")).toContainText("Correo o contraseña incorrectos");
   await expect(page).toHaveURL(/\/login/);
 });
 
@@ -19,13 +19,13 @@ test("bloqueo tras 5 intentos fallidos, incluso con la clave correcta", async ({
   const email = "bloqueo@andamar.test"; // cuenta dedicada; el seed la restablece
   for (let i = 1; i <= 4; i++) {
     await iniciarSesion(page, email, `incorrecta-${i}-xxxxx`);
-    await expect(page.getByRole("alert")).toContainText("Correo o contraseña incorrectos");
+    await expect(page.locator("#error-login")).toContainText("Correo o contraseña incorrectos");
   }
   await iniciarSesion(page, email, "incorrecta-5-xxxxx");
-  await expect(page.getByRole("alert")).toContainText("bloqueada");
+  await expect(page.locator("#error-login")).toContainText("bloqueada");
 
   await iniciarSesion(page, email, claveE2E());
-  await expect(page.getByRole("alert")).toContainText("bloqueada");
+  await expect(page.locator("#error-login")).toContainText("bloqueada");
   await expect(page).toHaveURL(/\/login/);
 });
 

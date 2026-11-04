@@ -21,7 +21,7 @@ export function claveE2E(): string {
 }
 
 export async function iniciarSesion(page: Page, email: string, password: string) {
-  await page.goto("/login");
+  await page.goto("/login", { waitUntil: "networkidle" }); // espera la hidratación del formulario
   await page.getByLabel("Correo").fill(email);
   await page.getByLabel("Contraseña").fill(password);
   await page.getByRole("button", { name: "Ingresar" }).click();

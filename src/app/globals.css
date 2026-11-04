@@ -39,6 +39,24 @@
     line-height: 1.5;
   }
 
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  td,
+  th {
+    font-variant-numeric: tabular-nums;
+  }
+
+  a,
+  button,
+  select,
+  summary {
+    touch-action: manipulation;
+  }
+
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;

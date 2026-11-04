@@ -49,7 +49,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
             </form>
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main id="contenido" tabIndex={-1} className="flex-1 p-4 outline-none md:p-6">{children}</main>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Iniciar sesión" };
 
 export default function PaginaLogin() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted p-4">
+    <main id="contenido" className="flex min-h-screen items-center justify-center bg-muted p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <p className="text-sm font-semibold text-primary">CRM-Andamar</p>
