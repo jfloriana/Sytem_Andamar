@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Rol {
+  ADMIN
+  GERENCIA
+  JEFE_VENTAS
+  VENDEDOR
+  JEFE_SERVICIO
+  EJECUTIVO_SERVICIO
+}
+
+enum EstadoCliente {
+  ACTIVO
+  INACTIVO
+  EN_RIESGO
+}
+
+enum Segmento {
+  A
+  B
+  C
+  SIN_CLASIFICAR
+}
+
+enum EtapaOportunidad {
+  PROSPECTO
+  CONTACTADO
+  PROPUESTA
+  NEGOCIACION
+  GANADA
+  PERDIDA
+}
+
+enum TipoActividad {
+  VISITA
+  LLAMADA
+  MENSAJE
+  TAREA
+}
+
+enum EstadoPedido {
+  REGISTRADO
+  ENTREGADO
+  ANULADO
+}
+
+enum PrioridadCaso {
+  BAJA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+enum EstadoCaso {
+  ABIERTO
+  EN_PROCESO
+  ESCALADO
+  RESUELTO
+  CERRADO
+}
+
+enum FinalidadConsentimiento {
+  SERVICIO
+  PROMOCIONES
+  ANALITICA
+}
+
+enum CanalConsentimiento {
+  TELEFONO
+  EMAIL
+  WHATSAPP
+  PRESENCIAL
+}
+
+enum TipoSolicitudTitular {
+  ACCESO
+  RECTIFICACION
+  SUPRESION
+}
+
+enum EstadoSolicitudTitular {
+  PENDIENTE
+  EN_PROCESO
+  ATENDIDA
+  RECHAZADA
+}
+
+model Usuario {
+  id               String    @id @default(cuid())
+  nombre           String
+  email            String    @unique
+  passwordHash     String
+  rol              Rol
+  activo           Boolean   @default(true)
+  jefeId           String?
+  intentosFallidos Int       @default(0)
+  bloqueadoHasta   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  jefe          Usuario?      @relation("Equipo", fields: [jefeId], references: [id])
+  equipo        Usuario[]     @relation("Equipo")
+  clientes      Cliente[]
+  oportunidades Oportunidad[]
+  actividades   Actividad[]
+  pedidos       Pedido[]
+  casos         Caso[]
+  auditorias    AuditLog[]
+
+  @@index([rol])
+}
+
+model Cliente {
+  id                    String        @id @default(cuid())
+  documento             String        @unique
+  razonSocial           String
+  direccion             String
+  telefono              String?
+  email                 String?
+  estado                EstadoCliente @default(ACTIVO)
+  segmento              Segmento      @default(SIN_CLASIFICAR)
+  vendedorId            String
+  condicionesEspeciales String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  vendedor        Usuario             @relation(fields: [vendedorId], references: [id])
+  contactos       Contacto[]
+  oportunidades   Oportunidad[]
+  actividades     Actividad[]
+  pedidos         Pedido[]
+  casos           Caso[]
+  consentimientos Consentimiento[]
+  historico       SegmentoHistorico[]
+  solicitudes     SolicitudTitular[]
+
+  @@index([documento])
+  @@index([vendedorId])
+}
+
+model Contacto {
+  id        String   @id @default(cuid())
+  clienteId String
+  nombre    String
+  cargo     String?
+  telefono  String?
+  email     String?
+  principal Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+}
+
+model Oportunidad {
+  id            String           @id @default(cuid())
+  clienteId     String
+  vendedorId    String
+  titulo        String
+  etapa         EtapaOportunidad @default(PROSPECTO)
+  montoEstimado Decimal          @db.Decimal(12, 2)
+  motivoPerdida String?
+  cerradaAt     DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  cliente     Cliente     @relation(fields: [clienteId], references: [id])
+  vendedor    Usuario     @relation(fields: [vendedorId], references: [id])
+  actividades Actividad[]
+  pedidos     Pedido[]
+
+  @@index([etapa, vendedorId])
+  @@index([clienteId])
+}
+
+model Actividad {
+  id             String        @id @default(cuid())
+  tipo           TipoActividad
+  clienteId      String
+  oportunidadId  String?
+  usuarioId      String
+  fecha          DateTime
+  resultado      String?
+  recordatorioAt DateTime?
+  completada     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  cliente     Cliente      @relation(fields: [clienteId], references: [id])
+  oportunidad Oportunidad? @relation(fields: [oportunidadId], references: [id])
+  usuario     Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@index([clienteId, fecha])
+  @@index([usuarioId, completada])
+}
+
+model Pedido {
+  id            String       @id @default(cuid())
+  clienteId     String
+  oportunidadId String?
+  vendedorId    String
+  fecha         DateTime
+  monto         Decimal      @db.Decimal(12, 2)
+  margen        Decimal      @db.Decimal(12, 2)
+  estado        EstadoPedido @default(REGISTRADO)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  cliente     Cliente      @relation(fields: [clienteId], references: [id])
+  oportunidad Oportunidad? @relation(fields: [oportunidadId], references: [id])
+  vendedor    Usuario      @relation(fields: [vendedorId], references: [id])
+
+  @@index([clienteId, fecha])
+}
+
+model Caso {
+  id                     String        @id @default(cuid())
+  clienteId              String
+  titulo                 String
+  descripcion            String
+  prioridad              PrioridadCaso @default(MEDIA)
+  estado                 EstadoCaso    @default(ABIERTO)
+  responsableId          String
+  aperturaAt             DateTime      @default(now())
+  fechaLimite            DateTime
+  primeraRespuestaAt     DateTime?
+  resueltoAt             DateTime?
+  resueltoPrimerContacto Boolean       @default(false)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  cliente     Cliente @relation(fields: [clienteId], references: [id])
+  responsable Usuario @relation(fields: [responsableId], references: [id])
+
+  @@index([estado, fechaLimite])
+  @@index([clienteId])
+}
+
+model Consentimiento {
+  id         String                  @id @default(cuid())
+  clienteId  String
+  finalidad  FinalidadConsentimiento
+  canal      CanalConsentimiento
+  otorgadoAt DateTime
+  retiradoAt DateTime?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId, finalidad])
+}
+
+model SegmentoHistorico {
+  id          String   @id @default(cuid())
+  clienteId   String
+  mes         DateTime
+  segmento    Segmento
+  margenAnual Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteId, mes])
+}
+
+model SolicitudTitular {
+  id           String                 @id @default(cuid())
+  clienteId    String
+  tipo         TipoSolicitudTitular
+  estado       EstadoSolicitudTitular @default(PENDIENTE)
+  solicitadaAt DateTime               @default(now())
+  atendidaAt   DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+
+  @@index([clienteId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  usuarioId String
+  accion    String
+  entidad   String
+  entidadId String
+  detalle   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([createdAt])
+  @@index([entidad, entidadId])
+  @@index([usuarioId])
+}
