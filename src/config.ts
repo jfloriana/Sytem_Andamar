@@ -36,6 +36,11 @@ export const IMPORTACION = {
   tamanoLote: 200,
 } as const;
 
+export const DUPLICADOS = {
+  /** Similitud mínima (0-1) entre nombres normalizados para advertir. */
+  similitudNombre: 0.9,
+} as const;
+
 export const CLV = {
   tasaDescuento: 0.1,
 } as const;
