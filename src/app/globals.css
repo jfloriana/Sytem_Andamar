@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 8.6%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8.6%;
+    --primary: 219 99% 53%;
+    --primary-hover: 219 100% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 95.7%;
+    --secondary-foreground: 0 0% 8.6%;
+    --muted: 0 0% 95.7%;
+    --muted-foreground: 0 0% 32%;
+    --destructive: 357 76% 49%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 138 67% 30%;
+    --warning: 45 100% 28%;
+    --border: 0 0% 87.8%;
+    --input: 0 0% 55%;
+    --ring: 219 99% 53%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media print {
+    .no-imprimir {
+      display: none !important;
+    }
+    body {
+      background: #fff;
+    }
+  }
+}
