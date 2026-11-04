@@ -10,3 +10,8 @@ playwright-report
 test-results
 playwright/.auth
 .vercel
+
+# Nunca subir variables de entorno ni su ejemplo
+.env
+.env.*
+.atl/
