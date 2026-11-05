@@ -1,5 +1,25 @@
 import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+
+const fuenteDisplay = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+const fuenteUi = Geist({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-ui",
+  display: "swap",
+});
+const fuenteMono = Geist_Mono({
+  subsets: ["latin"],
+  weight: ["500"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: { default: "CRM-Andamar", template: "%s | CRM-Andamar" },
@@ -15,7 +35,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html
+      lang="es"
+      className={`${fuenteDisplay.variable} ${fuenteUi.variable} ${fuenteMono.variable}`}
+    >
       <body>
         <a
           href="#contenido"
