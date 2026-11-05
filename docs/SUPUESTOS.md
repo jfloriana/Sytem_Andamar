@@ -6,8 +6,8 @@
 |---|---|---|
 | `awesome-design-md` | Usada (T0) | Referencia visual IBM Carbon -> `docs/DISENO.md`. |
 | `ui-ux-pro-max` | Usada (T0) | Se aplicaron sus reglas de accesibilidad, formularios, tipografía y color; no se ejecutó su buscador de datos. |
-| `frontend-design` | Usada en T1 y T2 | Criterio propio sin recargar: ficha 360 como secciones apiladas con borde fino, línea de tiempo con insignias de tipo, informe de importación en cifras tabulares. |
-| `web-design-guidelines` | Usada en T1 y T2 | Auditoría de formularios (etiquetas, `aria-describedby`, `autocomplete`, foco al primer error), tablas y móvil; ver capturas en `docs/capturas/`. |
+| `frontend-design` | Usada en T1, T2 y T3 | Criterio propio sin recargar: ficha 360 como secciones apiladas con borde fino, línea de tiempo con insignias de tipo, informe de importación en cifras tabulares. |
+| `web-design-guidelines` | Usada en T1, T2 y T3 | Auditoría de formularios (etiquetas, `aria-describedby`, `autocomplete`, foco al primer error), tablas y móvil; ver capturas en `docs/capturas/`. |
 | `image-to-code` | Descartada | No hay capturas ni maquetas adjuntas. |
 | Animación/3D (gsap-*, threejs-*, motion-design, animate*, etc.) | Descartadas | Prohibidas por la sección 4.1 y por simplicidad. |
 | `test-driven-development` | Usada en T1 | Pruebas de `can()` y bloqueo escritas antes de la implementación. |
@@ -36,3 +36,21 @@
 - `samples/clientes_importacion.csv` se genera con `npx tsx scripts/generar-muestra-clientes.ts` (faker es, seed 42): 600 filas, 30 con errores, 12 con documento repetido y 6 con nombre repetido; 558 importables. Sus documentos empiezan con `2099` y el seed los borra, igual que los clientes `E2E...` creados por las pruebas, para poder repetir la suite.
 - Seed de fase 2: 4 clientes demo (2 de `vendedor@`, 2 de `bloqueo@`), idempotente por documento.
 - Tablas en móvil: cada fila se apila como tarjeta "etiqueta: valor" (`.tabla-apilada`, `data-label`) en lugar de desplazarse horizontalmente; en escritorio conservan el desplazamiento horizontal.
+
+## Fase 3: oportunidades, actividades, pedidos y casos
+
+- Oportunidades: se agregó `Oportunidad.etapaCambiadaAt` (migración `20261104120000`) para contar las actividades registradas desde el último cambio de etapa. La comparación usa el momento de registro (`Actividad.createdAt`, asignado por la aplicación con el mismo reloj), no la fecha de la visita, para que una actividad con fecha retroactiva no habilite un avance.
+- Regla de avance: avanzar a una etapa posterior (incluida GANADA) exige al menos una actividad vinculada a esa oportunidad desde el último cambio. Retroceder no la exige. Marcar PERDIDA no exige actividad pero sí motivo (máx. 300 caracteres). GANADA y PERDIDA cierran la oportunidad (`cerradaAt`) y no admiten más cambios de etapa.
+- Una actividad cuenta para una oportunidad solo si se registró desde ella («Registrar actividad» en su ficha); las del cliente sin vincular no cuentan.
+- La oportunidad nace en la cartera del cliente (`vendedorId` = vendedor del cliente). Solo JEFE_VENTAS reasigna, y solo a vendedores de su equipo.
+- Tablero: en móvil las seis etapas se apilan; en escritorio son columnas con desplazamiento horizontal. Cada tarjeta tiene «Mover etapa» (un diálogo nativo `<dialog>`), sin arrastrar y soltar, que funciona con teclado y táctil. Muestra hasta 20 tarjetas por columna y las 500 más recientes; la lista pagina de 25 en 25.
+- «Mi día»: tarea = actividad no completada del usuario; usa el recordatorio si existe y, si no, la fecha. Vencida = antes de ahora. Visita, llamada y mensaje nacen completadas; solo la TAREA exige recordatorio. Las fechas de los formularios son hora de Lima (UTC-5 sin horario de verano) y se convierten a UTC en `src/domain/fechas.ts`.
+- «Registrar visita en 3 pasos»: (1) botón «Registrar visita» de Mi día, (2) elegir cliente y anotar el resultado (tipo y fecha ya vienen por defecto), (3) «Guardar visita». Desde la ficha del cliente el cliente ya viene elegido.
+- Selectores de cliente: lista simple de hasta 1.000 clientes de la cartera visible (sin dados de baja). Con más clientes se debe entrar desde la ficha (los enlaces «Nuevo ...» ya llevan el cliente).
+- Pedidos: monto > 0 y margen entre 0 y el monto; no se aceptan fechas futuras (tolerancia de 1 día). Estados: REGISTRADO -> ENTREGADO -> ANULADO (ANULADO es final y pide confirmación). Los totales y el «último pedido» excluyen los anulados (consultas agregadas con `estado != ANULADO`, equivalente a `esPedidoValido`). Un pedido nuevo devuelve a ACTIVO a un cliente EN_RIESGO (regla 2); el cálculo de riesgo llega en la fase 4.
+- Casos: `fechaLimite` = apertura + 24 h (`SLA.horasLimite`). Un caso sin primera respuesta, abierto y vencido se muestra ESCALADO al consultarlo (bandeja, detalle, Mi día y ficha del cliente) sin cambiar lo guardado; la tarea diaria de la fase 4 lo persistirá. La bandeja filtra con la condición equivalente en base de datos (`filtroEscalados`).
+- Primera respuesta: se registra con el botón correspondiente (pasa a EN_PROCESO). «Resuelto en el primer contacto» solo puede marcarse al resolver un caso que aún no tiene primera respuesta; si ya la tenía, queda en «No». Resolver sin respuesta previa fija `primeraRespuestaAt` = `resueltoAt`. Cerrar solo aplica a casos resueltos.
+- Alcance de casos: JEFE_SERVICIO y GERENCIA ven todos; EJECUTIVO_SERVICIO solo los suyos (responsable) y siempre queda como responsable de lo que registra; el jefe elige entre el equipo de servicio y puede reasignar mientras el caso esté abierto. En la ficha del cliente, el ejecutivo ve el historial de casos en solo lectura pero solo abre los propios.
+- Auditoría de fase 3: CREAR/ACTUALIZAR/REASIGNAR_OPORTUNIDAD, CAMBIAR_ETAPA_OPORTUNIDAD, CREAR/COMPLETAR_ACTIVIDAD, CREAR/ANULAR/ENTREGAR_PEDIDO, CREAR/RESPONDER/RESOLVER/CERRAR/REASIGNAR_CASO. La matriz de `can()` no cambió.
+- Seed de fase 3 (idempotente, relativo a la fecha de la corrida): 4 oportunidades `Demo:`, 3 actividades, 3 pedidos (uno ANULADO de 9.999 USD para probar la exclusión) y 2 casos (uno vencido sin responder, «Demo: Entrega incompleta»). Se borran y recrean en los 4 clientes demo; el seed también borra lo que las pruebas cuelgan de clientes `E2E...` y `2099...` antes de eliminarlos.
+

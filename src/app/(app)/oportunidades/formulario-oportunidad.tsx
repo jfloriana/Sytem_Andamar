@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Campo, CampoSelect } from "@/components/campo";
 import { Button } from "@/components/ui/button";
+import { enviar } from "@/lib/enviar";
 import type { ResultadoForm } from "@/lib/formularios";
 
 type Accion = (previo: ResultadoForm, datos: FormData) => Promise<ResultadoForm>;
@@ -25,7 +26,7 @@ export function FormularioOportunidad({ accion, modo, clientes = [], vendedores 
   const error = (campo: string) => estado.errores?.[campo]?.[0] ?? null;
 
   return (
-    <form action={despachar} noValidate className="flex max-w-xl flex-col gap-4">
+    <form onSubmit={enviar(despachar)} noValidate className="flex max-w-xl flex-col gap-4">
       {oportunidadId ? <input type="hidden" name="oportunidadId" value={oportunidadId} /> : null}
       {modo === "crear" ? (
         <CampoSelect id="clienteId" name="clienteId" etiqueta="Cliente" defaultValue={valor("clienteId")} error={error("clienteId")} required>

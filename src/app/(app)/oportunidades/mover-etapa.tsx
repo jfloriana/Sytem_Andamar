@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { CampoSelect, CampoTextoLargo } from "@/components/campo";
 import { Button } from "@/components/ui/button";
 import type { Etapa } from "@/domain/oportunidades";
+import { enviar } from "@/lib/enviar";
 import type { ResultadoForm } from "@/lib/formularios";
 import { cambiarEtapa } from "./actions";
 
@@ -33,7 +34,7 @@ function Dialogo({ oportunidadId, titulo, destinos, alCerrar }: Props & { alCerr
       onClose={alCerrar}
       className="w-[min(92vw,28rem)] rounded border bg-background p-0 text-foreground backdrop:bg-black/40"
     >
-      <form action={despachar} noValidate className="flex flex-col gap-4 p-4 md:p-6">
+      <form onSubmit={enviar(despachar)} noValidate className="flex flex-col gap-4 p-4 md:p-6">
         <h2 id={`${idBase}-titulo`} className="text-xl font-semibold">
           Mover «{titulo}»
         </h2>

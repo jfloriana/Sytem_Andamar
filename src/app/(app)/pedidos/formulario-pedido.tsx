@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Campo, CampoSelect } from "@/components/campo";
 import { Button } from "@/components/ui/button";
+import { enviar } from "@/lib/enviar";
 import type { ResultadoForm } from "@/lib/formularios";
 import { crearPedido } from "./actions";
 
@@ -19,7 +20,7 @@ export function FormularioPedido({ clientes, inicial, cancelar }: Props) {
   const error = (campo: string) => estado.errores?.[campo]?.[0] ?? null;
 
   return (
-    <form action={despachar} noValidate className="flex max-w-xl flex-col gap-4">
+    <form onSubmit={enviar(despachar)} noValidate className="flex max-w-xl flex-col gap-4">
       {inicial.oportunidadId ? <input type="hidden" name="oportunidadId" value={inicial.oportunidadId} /> : null}
       <CampoSelect id="clienteId" name="clienteId" etiqueta="Cliente" defaultValue={valor("clienteId", inicial.clienteId)} error={error("clienteId")} required>
         <option value="">Elige un cliente</option>

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Campo, CampoSelect, CampoTextoLargo } from "@/components/campo";
 import { Button } from "@/components/ui/button";
+import { enviar } from "@/lib/enviar";
 import type { ResultadoForm } from "@/lib/formularios";
 import { crearActividad } from "./actions";
 
@@ -29,7 +30,7 @@ export function FormularioActividad({ clientes, inicial, oportunidadTitulo, canc
   const error = (campo: string) => estado.errores?.[campo]?.[0] ?? null;
 
   return (
-    <form action={despachar} noValidate className="flex max-w-xl flex-col gap-4">
+    <form onSubmit={enviar(despachar)} noValidate className="flex max-w-xl flex-col gap-4">
       {inicial.oportunidadId ? <input type="hidden" name="oportunidadId" value={inicial.oportunidadId} /> : null}
       {oportunidadTitulo ? (
         <p className="rounded border bg-muted p-3 text-sm">

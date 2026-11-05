@@ -52,3 +52,12 @@ Base de 4 px: 4, 8, 12, 16, 24, 32, 48. Radios: 4 px (controles y tarjetas), 999
 - Formulario: dos grupos (`fieldset` + `legend`): datos del cliente y contacto principal opcional. Validación en línea al salir del campo con el mismo esquema Zod del servidor; al enviar con errores el foco va al primer campo inválido. El aviso de duplicado es un bloque ámbar con texto («Posible duplicado») y el botón «Guardar de todos modos».
 - Ficha 360: título con insignias de estado y segmento, y secciones en tarjetas: Datos (con calidad de datos), Contactos, Pedidos, Oportunidades, Actividades, Casos, Consentimientos y Línea de tiempo. Cada sección vacía explica por qué está vacía. Acciones destructivas (baja, eliminar contacto) piden confirmación.
 - Importación: tres pasos visibles (archivo, informe, confirmar) con cifras en tarjetas y tablas de errores, duplicados y advertencias.
+
+## Pantallas de la fase 3
+
+- **Mi día (inicio):** en móvil, dos botones grandes apilados («Registrar visita», «Nueva tarea», 48 px) y luego «Vencidas» y «Pendientes» como tarjetas con una fila por tarea y botón «Completar» (44 px). Las vencidas llevan la insignia roja «Vencida» (texto, no solo color). Los roles de servicio ven sus casos abiertos con los escalados primero.
+- **Oportunidades:** conmutador Tablero/Lista (botones con `aria-current`). El tablero apila las etapas en móvil y las pone en columnas de 288 px con desplazamiento horizontal en escritorio; cada columna muestra cantidad y monto. «Mover etapa» abre un diálogo modal nativo con foco atrapado; al elegir «Perdida» aparece el campo de motivo con su error junto al campo. En la ficha, la insignia «Necesita actividad» / «Puede avanzar» explica por qué se bloquea el avance.
+- **Pedidos:** tres cifras (válidos, monto, margen) sobre la tabla, con la nota de que no incluyen anulados; acciones por fila con confirmación para anular.
+- **Casos:** la bandeja abre en «Abiertos» ordenada por vencimiento; el aviso de casos escalados es una insignia roja con texto y la fila vencida añade «Vencido hace N h». El detalle agrupa plazo y tiempos (respuesta, resolución, cumplimiento del plazo, primer contacto) y deja las acciones en una tarjeta aparte.
+- Formularios nuevos: mismos campos accesibles de la fase 2 (etiqueta visible, ayuda y error con `aria-describedby`), `noValidate` con validación en el servidor y los valores conservados al fallar.
+

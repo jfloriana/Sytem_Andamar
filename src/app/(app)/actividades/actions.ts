@@ -33,6 +33,8 @@ export async function crearActividad(_previo: ResultadoForm, formData: FormData)
   const actividad = await prisma.$transaction(async (tx) => {
     const nueva = await tx.actividad.create({
       data: {
+        // Mismo reloj que `etapaCambiadaAt`: así se compara «actividad posterior al cambio de etapa» sin desfases.
+        createdAt: new Date(),
         tipo: d.tipo,
         clienteId: cliente.id,
         oportunidadId: d.oportunidadId ?? null,

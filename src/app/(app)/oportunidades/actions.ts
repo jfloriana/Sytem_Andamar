@@ -26,7 +26,13 @@ export async function crearOportunidad(_previo: ResultadoForm, formData: FormDat
 
   const id = await prisma.$transaction(async (tx) => {
     const nueva = await tx.oportunidad.create({
-      data: { clienteId: cliente.id, vendedorId: cliente.vendedorId, titulo: d.titulo, montoEstimado: d.montoEstimado },
+      data: {
+        clienteId: cliente.id,
+        vendedorId: cliente.vendedorId,
+        titulo: d.titulo,
+        montoEstimado: d.montoEstimado,
+        etapaCambiadaAt: new Date(),
+      },
     });
     await registrarAuditoria(
       {

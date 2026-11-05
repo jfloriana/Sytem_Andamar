@@ -1,7 +1,7 @@
 // Semilla mínima de la fase 1: un usuario por rol y uno extra para la prueba de bloqueo.
 // La semilla completa (600 clientes, pedidos, casos...) llega en la fase 5.
 // Uso: SEED_PASSWORD=... npx prisma db seed   (la clave la defines tú; no hay valor por defecto)
-import { PrismaClient, type Rol } from "@prisma/client";
+import { Prisma, PrismaClient, type Rol } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -34,8 +34,20 @@ const CLIENTES: {
 /** Prefijos de documentos que crean las pruebas E2E y la importación de muestra; se borran para poder repetir la suite. */
 const PREFIJOS_DE_PRUEBA = ["E2E", "2099"];
 
+/** Borra lo que cuelga de los clientes (sin cascada) para poder repetir la suite de pruebas. */
+async function borrarDependientes(clientes: Prisma.ClienteWhereInput) {
+  const donde = { cliente: clientes };
+  await prisma.actividad.deleteMany({ where: donde });
+  await prisma.pedido.deleteMany({ where: donde });
+  await prisma.caso.deleteMany({ where: donde });
+  await prisma.oportunidad.deleteMany({ where: donde });
+  await prisma.solicitudTitular.deleteMany({ where: donde });
+}
+
 async function sembrarClientes() {
-  await prisma.cliente.deleteMany({ where: { OR: PREFIJOS_DE_PRUEBA.map((p) => ({ documento: { startsWith: p } })) } });
+  const prefijos: Prisma.ClienteWhereInput = { OR: PREFIJOS_DE_PRUEBA.map((p) => ({ documento: { startsWith: p } })) };
+  await borrarDependientes(prefijos);
+  await prisma.cliente.deleteMany({ where: prefijos });
   for (const c of CLIENTES) {
     const vendedor = await prisma.usuario.findUniqueOrThrow({ where: { email: c.vendedor } });
     const datos = { razonSocial: c.razonSocial, direccion: c.direccion, telefono: c.telefono, vendedorId: vendedor.id, estado: "ACTIVO" as const };
@@ -48,6 +60,57 @@ async function sembrarClientes() {
     if (c.contacto) await prisma.contacto.create({ data: { clienteId: cliente.id, ...c.contacto, principal: true } });
   }
   console.log(`Sembrados ${CLIENTES.length} clientes.`);
+}
+
+const HORA = 60 * 60 * 1000;
+const DIA = 24 * HORA;
+const hace = (ms: number) => new Date(Date.now() - ms);
+const enDias = (n: number) => new Date(Date.now() + n * DIA);
+
+/** Oportunidades, actividades, pedidos y casos demo de la fase 3; se rehacen en cada corrida (idempotente). */
+async function sembrarFase3() {
+  const demo = { documento: { in: CLIENTES.map((c) => c.documento) } };
+  await borrarDependientes(demo);
+
+  const porDocumento = async (documento: string) => prisma.cliente.findUniqueOrThrow({ where: { documento } });
+  const usuario = (email: string) => prisma.usuario.findUniqueOrThrow({ where: { email } });
+  const [uno, dos, tres] = await Promise.all([porDocumento("20100000001"), porDocumento("20100000002"), porDocumento("20100000003")]);
+  const [vendedor, ajeno, ejecutivo] = await Promise.all([usuario("vendedor@andamar.test"), usuario("bloqueo@andamar.test"), usuario("ejecutivo.servicio@andamar.test")]);
+
+  const opp = (clienteId: string, vendedorId: string, titulo: string, etapa: "PROSPECTO" | "CONTACTADO" | "PROPUESTA" | "NEGOCIACION", montoEstimado: number) =>
+    prisma.oportunidad.create({ data: { clienteId, vendedorId, titulo, etapa, montoEstimado, etapaCambiadaAt: hace(3 * DIA) } });
+  await opp(uno.id, vendedor.id, "Demo: Pedido trimestral", "PROSPECTO", 5000);
+  await opp(uno.id, vendedor.id, "Demo: Linea nueva", "PROPUESTA", 3200);
+  await opp(dos.id, vendedor.id, "Demo: Reposicion de herramientas", "NEGOCIACION", 1800.5);
+  await opp(tres.id, ajeno.id, "Demo: Oportunidad ajena", "CONTACTADO", 900);
+
+  const tarea = (clienteId: string, resultado: string, recordatorioAt: Date) =>
+    prisma.actividad.create({ data: { tipo: "TAREA", clienteId, usuarioId: vendedor.id, fecha: hace(2 * DIA), resultado, recordatorioAt, completada: false } });
+  await tarea(uno.id, "Demo: llamar para confirmar entrega", hace(DIA));
+  await tarea(dos.id, "Demo: enviar lista de precios", enDias(2));
+  await prisma.actividad.create({
+    data: { tipo: "VISITA", clienteId: uno.id, usuarioId: vendedor.id, fecha: hace(5 * DIA), resultado: "Demo: visita de presentacion", completada: true },
+  });
+
+  await prisma.pedido.create({ data: { clienteId: uno.id, vendedorId: vendedor.id, fecha: hace(20 * DIA), monto: 1200, margen: 180, estado: "ENTREGADO" } });
+  await prisma.pedido.create({ data: { clienteId: uno.id, vendedorId: vendedor.id, fecha: hace(2 * DIA), monto: 800, margen: 120, estado: "REGISTRADO" } });
+  await prisma.pedido.create({ data: { clienteId: uno.id, vendedorId: vendedor.id, fecha: hace(DIA), monto: 9999, margen: 999, estado: "ANULADO" } });
+
+  const caso = (titulo: string, apertura: Date, prioridad: "BAJA" | "MEDIA" | "ALTA" | "URGENTE") =>
+    prisma.caso.create({
+      data: {
+        clienteId: uno.id,
+        titulo,
+        descripcion: "Caso de demostracion para pruebas.",
+        prioridad,
+        responsableId: ejecutivo.id,
+        aperturaAt: apertura,
+        fechaLimite: new Date(apertura.getTime() + 24 * HORA),
+      },
+    });
+  await caso("Demo: Entrega incompleta", hace(48 * HORA), "ALTA"); // vencido sin primera respuesta: se ve ESCALADO
+  await caso("Demo: Consulta de precios", hace(HORA), "BAJA"); // dentro del plazo
+  console.log("Sembradas oportunidades, actividades, pedidos y casos demo.");
 }
 
 async function main() {
@@ -73,6 +136,7 @@ async function main() {
   });
   console.log(`Sembrados ${USUARIOS.length} usuarios.`);
   await sembrarClientes();
+  await sembrarFase3();
 }
 
 main()

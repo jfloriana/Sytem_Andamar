@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Campo, CampoSelect, CampoTextoLargo } from "@/components/campo";
 import { Button } from "@/components/ui/button";
+import { enviar } from "@/lib/enviar";
 import type { ResultadoForm } from "@/lib/formularios";
 import { crearCaso } from "./actions";
 
@@ -29,7 +30,7 @@ export function FormularioCaso({ clientes, responsables, puedeElegirResponsable,
   const error = (campo: string) => estado.errores?.[campo]?.[0] ?? null;
 
   return (
-    <form action={despachar} noValidate className="flex max-w-xl flex-col gap-4">
+    <form onSubmit={enviar(despachar)} noValidate className="flex max-w-xl flex-col gap-4">
       <CampoSelect id="clienteId" name="clienteId" etiqueta="Cliente" defaultValue={valor("clienteId", clienteId)} error={error("clienteId")} required>
         <option value="">Elige un cliente</option>
         {clientes.map((c) => (
