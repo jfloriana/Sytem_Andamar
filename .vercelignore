@@ -1,0 +1,7 @@
+.env
+.env.*
+odd
+.atl
+test-results
+playwright-report
+docs/capturas

@@ -16,3 +16,6 @@ playwright/.auth
 .env.*
 .atl/
 odd/
+
+.vercel
+.env*
