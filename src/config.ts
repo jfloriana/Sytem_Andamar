@@ -42,7 +42,30 @@ export const DUPLICADOS = {
 } as const;
 
 export const CLV = {
+  /** d: tasa de descuento anual. */
   tasaDescuento: 0.1,
+  /** r: retención anual de referencia (línea base de la empresa) usada en todas las pantallas. */
+  retencionReferencia: 0.78,
+} as const;
+
+/** Metas y líneas base del tablero (sección 2 del spec). `null` = no se mide todavía. */
+export const INDICADORES = {
+  retencion: { lineaBase: 78, meta: 83 },
+  conversion: { lineaBase: 18, meta: 22 },
+  primerContacto: { lineaBase: null, meta: 70 },
+  /** Horas; menor es mejor. */
+  tiempoRespuesta: { lineaBase: null, meta: 24 },
+  completitud: { lineaBase: 55, meta: 90 },
+  usuariosActivos: { lineaBase: null, meta: 90 },
+  /** Meses del gráfico de tendencia, terminando en el mes del fin del período. */
+  mesesTendencia: 6,
+  /** Período por defecto del tablero y máximo permitido, en meses. */
+  periodoMeses: 12,
+  periodoMaxMeses: 36,
+  /** Ventana de «usuario activo», en días. */
+  diasUsuarioActivo: 30,
+  /** Sin línea base: ámbar si el valor llega a esta fracción de la meta (o la meta es menor es mejor: 1/fracción). */
+  ambarSinLineaBase: 0.8,
 } as const;
 
 export const AUDITORIA = {

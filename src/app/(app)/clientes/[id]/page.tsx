@@ -4,8 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { camposFaltantes } from "@/domain/calidad-datos";
+import { calcularClv } from "@/domain/clv";
+import { inicioVentana, margenVentana } from "@/domain/segmentacion";
 import { construirLineaTiempo, type EventoTiempo } from "@/domain/linea-tiempo";
 import { estadoEfectivo } from "@/domain/sla";
+import { CLV } from "@/config";
 import { clienteAutorizado, recursoCliente } from "@/lib/clientes";
 import {
   ETIQUETA_ESTADO_CASO,
@@ -23,7 +26,7 @@ import {
   formatoFechaHora,
 } from "@/lib/formato";
 import { can } from "@/lib/permisos";
-import { resumenPedidosCliente } from "@/lib/pedidos";
+import { PEDIDOS_VALIDOS, resumenPedidosCliente } from "@/lib/pedidos";
 import { prisma } from "@/lib/prisma";
 import { requerir } from "@/lib/sesion";
 import { BotonEstadoCliente } from "./boton-estado";
@@ -98,6 +101,15 @@ function Acciones({ children }: { children: React.ReactNode }) {
   return <div className="no-imprimir mb-3 flex flex-wrap gap-2">{children}</div>;
 }
 
+/** Margen de los últimos 12 meses (pedidos no anulados), base de la segmentación y del CLV. */
+async function resumenMargenVentana(clienteId: string) {
+  const filas = await prisma.pedido.findMany({
+    where: { clienteId, ...PEDIDOS_VALIDOS, fecha: { gte: inicioVentana(new Date()) } },
+    select: { estado: true, fecha: true, margen: true },
+  });
+  return margenVentana(filas.map((p) => ({ estado: p.estado, fecha: p.fecha, margen: Number(p.margen) })), new Date());
+}
+
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const usuario = await requerir("ver", "cliente");
@@ -113,8 +125,10 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     casos: can(usuario, "ver", "caso"),
     consentimientos: can(usuario, "ver", "consentimiento"),
   };
+  // Segmento, margen y CLV: quien lee pedidos o los indicadores de la empresa (p. ej. ADMIN).
+  const veSegmento = permisos.pedidos || can(usuario, "ver", "indicadores");
   const where = { clienteId: cliente.id };
-  const [resumen, contactos, pedidos, oportunidades, actividades, casos, consentimientos] = await Promise.all([
+  const [resumen, contactos, pedidos, oportunidades, actividades, casos, consentimientos, margen12m, historico] = await Promise.all([
     permisos.pedidos ? resumenPedidosCliente(cliente.id) : null,
     prisma.contacto.findMany({ where, orderBy: [{ principal: "desc" }, { nombre: "asc" }] }),
     permisos.pedidos ? prisma.pedido.findMany({ where, orderBy: { fecha: "desc" }, take: LIMITE }) : [],
@@ -122,7 +136,10 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     permisos.actividades ? prisma.actividad.findMany({ where, orderBy: { fecha: "desc" }, take: LIMITE }) : [],
     permisos.casos ? prisma.caso.findMany({ where, orderBy: { aperturaAt: "desc" }, take: LIMITE }) : [],
     permisos.consentimientos ? prisma.consentimiento.findMany({ where, orderBy: { otorgadoAt: "desc" }, take: LIMITE }) : [],
+    veSegmento ? resumenMargenVentana(cliente.id) : null,
+    veSegmento ? prisma.segmentoHistorico.findMany({ where, orderBy: { mes: "desc" }, take: 12 }) : [],
   ]);
+  const clv = margen12m ? calcularClv(margen12m.margen, CLV.retencionReferencia) : null;
 
   const principal = contactos.find((c) => c.principal) ?? null;
   const faltan = camposFaltantes({ ...cliente, contactoPrincipal: principal });
@@ -195,6 +212,53 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
           />
         </dl>
       </Seccion>
+
+      {veSegmento && margen12m ? (
+        <Seccion titulo="Segmento y valor del cliente">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Dato etiqueta="Segmento actual" valor={ETIQUETA_SEGMENTO[cliente.segmento]} />
+            <Dato etiqueta="Margen de los últimos 12 meses" valor={formatoDinero(margen12m.margen)} />
+            <Dato
+              etiqueta="Valor del cliente (CLV)"
+              valor={clv === null ? "No disponible" : formatoDinero(clv)}
+            />
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">
+            CLV simplificado: m x r / (1 + d - r), con m = margen de los últimos 12 meses, r = retención de referencia {Math.round(CLV.retencionReferencia * 100)} % y
+            d = {Math.round(CLV.tasaDescuento * 100)} %. Es una aproximación, no un pronóstico.
+          </p>
+          <h3 className="mb-1 mt-4 text-sm font-semibold">Evolución del segmento</h3>
+          {historico.length === 0 ? (
+            <Vacio texto="Aún no hay histórico: se genera con la tarea mensual o con «Recalcular ahora» (administrador)." />
+          ) : (
+            <table className="w-full text-sm tabular-nums">
+              <caption className="sr-only">Histórico mensual de segmento y margen anual del cliente</caption>
+              <thead>
+                <tr className="text-left text-xs text-muted-foreground">
+                  <th scope="col" className="py-1 pr-2 font-semibold">
+                    Mes
+                  </th>
+                  <th scope="col" className="py-1 pr-2 font-semibold">
+                    Segmento
+                  </th>
+                  <th scope="col" className="py-1 font-semibold">
+                    Margen anual
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {historico.map((h) => (
+                  <tr key={h.id} className="border-t">
+                    <td className="py-1 pr-2">{h.mes.toISOString().slice(0, 7)}</td>
+                    <td className="py-1 pr-2">{ETIQUETA_SEGMENTO[h.segmento]}</td>
+                    <td className="py-1">{formatoDinero(h.margenAnual.toString())}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Seccion>
+      ) : null}
 
       <Seccion titulo="Contactos">
         <ContactosCliente

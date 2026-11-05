@@ -54,3 +54,16 @@
 - Auditoría de fase 3: CREAR/ACTUALIZAR/REASIGNAR_OPORTUNIDAD, CAMBIAR_ETAPA_OPORTUNIDAD, CREAR/COMPLETAR_ACTIVIDAD, CREAR/ANULAR/ENTREGAR_PEDIDO, CREAR/RESPONDER/RESOLVER/CERRAR/REASIGNAR_CASO. La matriz de `can()` no cambió.
 - Seed de fase 3 (idempotente, relativo a la fecha de la corrida): 4 oportunidades `Demo:`, 3 actividades, 3 pedidos (uno ANULADO de 9.999 USD para probar la exclusión) y 2 casos (uno vencido sin responder, «Demo: Entrega incompleta»). Se borran y recrean en los 4 clientes demo; el seed también borra lo que las pruebas cuelgan de clientes `E2E...` y `2099...` antes de eliminarlos.
 
+
+## Fase 4: segmentación, riesgo, CLV, cron y tablero
+
+- Fórmulas, filtros y semáforo: ver `docs/INDICADORES.md`. Umbrales, metas y líneas base en `src/config.ts` (`SEGMENTOS`, `RIESGO`, `CLV`, `INDICADORES`).
+- Riesgo: umbral = máximo entre 30 días y 1,5 x intervalo medio; «más de» es estricto (el día exacto del umbral no es riesgo). Con menos de 3 pedidos nunca hay riesgo. El recálculo no toca clientes `INACTIVO`.
+- Segmento: la ventana de 12 meses es de calendario (UTC) e inclusiva en el inicio. Un cliente con pedidos pero solo fuera de la ventana queda `SIN_CLASIFICAR`. El histórico guarda a todos los clientes (incluidos dados de baja) con el día 1 del mes UTC; recalcular dos veces en el mes reemplaza las filas del mes.
+- CLV: `r` es la retención de referencia fija (78 %, línea base del spec) en la ficha y en el tablero, para que ambas cifras coincidan y no dependan de un cálculo pesado por pantalla. Se puede cambiar en `CLV.retencionReferencia`.
+- Tablero: fechas del período en UTC, hasta inclusive. Sin denominador el indicador es «Sin datos». La retención de la tendencia es anual móvil. La completitud no tiene historia de ediciones: su tendencia aplica los datos actuales a los clientes que existían en cada mes. Los usuarios activos usan `AuditLog` como señal de escritura.
+- Cron: GET y POST con `Authorization: Bearer CRON_SECRET`; sin variable configurada todo se rechaza (401). Los cron no escriben auditoría porque `AuditLog.usuarioId` exige un usuario; «Recalcular ahora» sí (`RECALCULAR_SEGMENTACION`). Las rutas están excluidas del middleware de sesión (se protegen solo con el secreto).
+- `vercel.json`: diario a las 08:00 UTC y mensual el día 1 a las 09:00 UTC (el plan gratuito permite una ejecución diaria como máximo).
+- Auditoría de fase 4: `RECALCULAR_SEGMENTACION`, `EXPORTAR_INDICADORES`. La matriz de `can()` no cambió: `indicadores` (ver/exportar) y `segmentacion` (recalcular) ya estaban definidos en la fase 1. `JEFE_VENTAS` lee y exporta solo su equipo.
+- Seed de fase 4 (idempotente): «Tienda Riesgo Muestra» (cartera de `vendedor@`, 4 pedidos cada 30 días que se cortaron hace 170 días: riesgo y segmento A tras recalcular) y 3 pedidos antiguos de «Panaderia Ajena Tres» (riesgo en otra cartera, para probar el alcance). Cada corrida devuelve los 5 clientes demo a `SIN_CLASIFICAR` y borra su histórico.
+- Skills: `dataviz` no estaba instalada en la carpeta de skills del usuario; los gráficos siguen `docs/DISENO.md` (azules Carbon, leyenda y tabla alternativa, meta como línea de referencia, texto alternativo en cada gráfico). Sin animaciones en Recharts (`isAnimationActive={false}`).

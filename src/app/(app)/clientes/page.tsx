@@ -64,6 +64,9 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-[28px] font-semibold leading-tight">Clientes</h1>
         <div className="no-imprimir flex flex-wrap gap-2">
+          <Button asChild variant="secondary">
+            <Link href="/clientes/riesgo">Clientes en riesgo</Link>
+          </Button>
           {can(usuario, "crear", "importacion") ? (
             <Button asChild variant="secondary">
               <Link href="/clientes/importar">Importar CSV</Link>

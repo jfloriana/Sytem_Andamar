@@ -29,6 +29,8 @@ const CLIENTES: {
   { documento: "20100000002", razonSocial: "Ferreteria Demo Dos", direccion: "Jr. Demo 202, Lima", telefono: "900000002", vendedor: "vendedor@andamar.test" },
   { documento: "20100000003", razonSocial: "Panaderia Ajena Tres", direccion: "Calle Demo 303, Cusco", telefono: "900000003", vendedor: "bloqueo@andamar.test", contacto: { nombre: "Beto Demo", telefono: "900000033" } },
   { documento: "20100000004", razonSocial: "Libreria Ajena Cuatro", direccion: "Av. Demo 404, Arequipa", telefono: "900000004", vendedor: "bloqueo@andamar.test" },
+  // Fase 4: compraba cada 30 dias y dejo de comprar (aparece en riesgo y es segmento A tras recalcular).
+  { documento: "20100000005", razonSocial: "Tienda Riesgo Muestra", direccion: "Av. Demo 505, Lima", telefono: "900000005", vendedor: "vendedor@andamar.test", contacto: { nombre: "Carla Demo", telefono: "900000055" } },
 ];
 
 /** Prefijos de documentos que crean las pruebas E2E y la importación de muestra; se borran para poder repetir la suite. */
@@ -50,7 +52,8 @@ async function sembrarClientes() {
   await prisma.cliente.deleteMany({ where: prefijos });
   for (const c of CLIENTES) {
     const vendedor = await prisma.usuario.findUniqueOrThrow({ where: { email: c.vendedor } });
-    const datos = { razonSocial: c.razonSocial, direccion: c.direccion, telefono: c.telefono, vendedorId: vendedor.id, estado: "ACTIVO" as const };
+    // El segmento vuelve a SIN_CLASIFICAR para que cada corrida parta del mismo punto (se recalcula en la fase 4).
+    const datos = { razonSocial: c.razonSocial, direccion: c.direccion, telefono: c.telefono, vendedorId: vendedor.id, estado: "ACTIVO" as const, segmento: "SIN_CLASIFICAR" as const };
     const cliente = await prisma.cliente.upsert({
       where: { documento: c.documento },
       update: datos,
@@ -71,10 +74,11 @@ const enDias = (n: number) => new Date(Date.now() + n * DIA);
 async function sembrarFase3() {
   const demo = { documento: { in: CLIENTES.map((c) => c.documento) } };
   await borrarDependientes(demo);
+  await prisma.segmentoHistorico.deleteMany({ where: { cliente: demo } });
 
   const porDocumento = async (documento: string) => prisma.cliente.findUniqueOrThrow({ where: { documento } });
   const usuario = (email: string) => prisma.usuario.findUniqueOrThrow({ where: { email } });
-  const [uno, dos, tres] = await Promise.all([porDocumento("20100000001"), porDocumento("20100000002"), porDocumento("20100000003")]);
+  const [uno, dos, tres, cinco] = await Promise.all([porDocumento("20100000001"), porDocumento("20100000002"), porDocumento("20100000003"), porDocumento("20100000005")]);
   const [vendedor, ajeno, ejecutivo] = await Promise.all([usuario("vendedor@andamar.test"), usuario("bloqueo@andamar.test"), usuario("ejecutivo.servicio@andamar.test")]);
 
   const opp = (clienteId: string, vendedorId: string, titulo: string, etapa: "PROSPECTO" | "CONTACTADO" | "PROPUESTA" | "NEGOCIACION", montoEstimado: number) =>
@@ -95,6 +99,14 @@ async function sembrarFase3() {
   await prisma.pedido.create({ data: { clienteId: uno.id, vendedorId: vendedor.id, fecha: hace(20 * DIA), monto: 1200, margen: 180, estado: "ENTREGADO" } });
   await prisma.pedido.create({ data: { clienteId: uno.id, vendedorId: vendedor.id, fecha: hace(2 * DIA), monto: 800, margen: 120, estado: "REGISTRADO" } });
   await prisma.pedido.create({ data: { clienteId: uno.id, vendedorId: vendedor.id, fecha: hace(DIA), monto: 9999, margen: 999, estado: "ANULADO" } });
+
+  // Fase 4: pedidos espaciados cada 30 dias que se cortaron hace mucho (riesgo). Margen total de la ventana: 1.200 (A) y 150 (C).
+  for (const dias of [260, 230, 200, 170]) {
+    await prisma.pedido.create({ data: { clienteId: cinco.id, vendedorId: vendedor.id, fecha: hace(dias * DIA), monto: 1500, margen: 300, estado: "ENTREGADO" } });
+  }
+  for (const dias of [300, 270, 240]) {
+    await prisma.pedido.create({ data: { clienteId: tres.id, vendedorId: ajeno.id, fecha: hace(dias * DIA), monto: 400, margen: 50, estado: "ENTREGADO" } });
+  }
 
   const caso = (titulo: string, apertura: Date, prioridad: "BAJA" | "MEDIA" | "ALTA" | "URGENTE") =>
     prisma.caso.create({

@@ -16,10 +16,10 @@
 ![Roles](https://img.shields.io/badge/Roles-6-1f6feb)
 ![Entidades](https://img.shields.io/badge/Entidades-11-0f62fe)
 ![Auth](https://img.shields.io/badge/Auth-Auth.js%20v5%20%7C%20JWT-6f42c1)
-![Pruebas unitarias](https://img.shields.io/badge/Vitest-1099%20pruebas-6e9f18)
+![Pruebas unitarias](https://img.shields.io/badge/Vitest-1177%20pruebas-6e9f18)
 ![E2E](https://img.shields.io/badge/E2E-Playwright-2ead33)
 ![Responsive](https://img.shields.io/badge/UI-Responsive%20%7C%20m%C3%B3vil-0e7490)
-![Fases](https://img.shields.io/badge/Fases-3%20de%205-f59e0b)
+![Fases](https://img.shields.io/badge/Fases-4%20de%205-f59e0b)
 
 </div>
 
@@ -78,7 +78,7 @@ El desarrollo se organiza en cinco fases.
 | 1 | Proyecto base, esquema de datos, autenticación, roles, autorización central, auditoría, gestión de usuarios | Completa |
 | 2 | Clientes, contactos, vista 360°, detección de duplicados, importación CSV | Completa |
 | 3 | Oportunidades, actividades, pedidos, casos de servicio con SLA | Completa |
-| 4 | Segmentación, clientes en riesgo, valor de vida (CLV), tareas programadas, tablero de indicadores | Pendiente |
+| 4 | Segmentación, clientes en riesgo, valor de vida (CLV), tareas programadas, tablero de indicadores | Completa |
 | 5 | Consentimientos y solicitudes de titulares, semilla completa, guía de aceptación | Pendiente |
 
 ## 2. Funcionalidades
