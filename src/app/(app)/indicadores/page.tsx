@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EncabezadoPagina } from "@/components/encabezado-pagina";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +46,7 @@ function Tarjeta({ t }: { t: TarjetaIndicador }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-[28px] font-semibold leading-none tabular-nums">{valorTexto(t)}</p>
+          <p className="font-display text-[28px] font-bold leading-none tracking-tight text-navy tabular-nums">{valorTexto(t)}</p>
           <Badge variant={VARIANTE_SEMAFORO[t.semaforo]}>{ETIQUETA_SEMAFORO[t.semaforo]}</Badge>
         </div>
         <dl className="grid grid-cols-2 gap-3 text-sm">
@@ -120,29 +121,31 @@ export default async function PaginaIndicadores({ searchParams }: { searchParams
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[28px] font-semibold leading-tight">Indicadores</h1>
-          <p className="text-sm text-muted-foreground">
+      <EncabezadoPagina
+        titulo="Indicadores"
+        descripcion={
+          <>
             Período del {dia(periodo.desde)} al {dia(periodo.hasta)}
             {vendedorId ? ` · vendedor ${vendedores.find((v) => v.id === vendedorId)?.nombre}` : ""}
             {segmento ? ` · ${ETIQUETA_SEGMENTO[segmento]}` : ""}
-          </p>
-        </div>
-        <div className="no-imprimir flex flex-wrap items-start gap-2">
-          {can(usuario, "exportar", "indicadores") ? (
-            <Button asChild variant="secondary">
-              <Link href={`/indicadores/exportar?${consulta.toString()}`} prefetch={false}>
-                Exportar CSV
-              </Link>
-            </Button>
-          ) : null}
-          <BotonImprimir />
-          {can(usuario, "recalcular", "segmentacion") ? <BotonRecalcular /> : null}
-        </div>
-      </div>
+          </>
+        }
+        acciones={
+          <>
+            {can(usuario, "exportar", "indicadores") ? (
+              <Button asChild variant="secondary">
+                <Link href={`/indicadores/exportar?${consulta.toString()}`} prefetch={false}>
+                  Exportar CSV
+                </Link>
+              </Button>
+            ) : null}
+            <BotonImprimir />
+            {can(usuario, "recalcular", "segmentacion") ? <BotonRecalcular /> : null}
+          </>
+        }
+      />
 
-      <form method="get" className="no-imprimir flex flex-wrap items-end gap-3" aria-label="Filtros del tablero">
+      <form method="get" className="no-imprimir flex flex-wrap items-end gap-3 rounded-card border border-border/80 bg-card p-4 shadow-card" aria-label="Filtros del tablero">
         <div className="flex flex-col gap-1">
           <Label htmlFor="desde">Desde</Label>
           <Input id="desde" name="desde" type="date" defaultValue={dia(periodo.desde)} />
@@ -214,7 +217,7 @@ export default async function PaginaIndicadores({ searchParams }: { searchParams
               <TableBody>
                 {tablero.distribucion.map((d) => (
                   <TableRow key={d.segmento}>
-                    <TableCell etiqueta="Segmento">{ETIQUETA_SEGMENTO[d.segmento]}</TableCell>
+                    <TableCell etiqueta="Segmento" className="whitespace-nowrap">{ETIQUETA_SEGMENTO[d.segmento]}</TableCell>
                     <TableCell etiqueta="Clientes">{d.clientes}</TableCell>
                     <TableCell etiqueta="Participación">{totalClientes === 0 ? "-" : `${numero.format((d.clientes / totalClientes) * 100)} %`}</TableCell>
                   </TableRow>
@@ -241,7 +244,7 @@ export default async function PaginaIndicadores({ searchParams }: { searchParams
               <TableBody>
                 {tablero.clv.map((c) => (
                   <TableRow key={c.segmento}>
-                    <TableCell etiqueta="Segmento">{ETIQUETA_SEGMENTO[c.segmento]}</TableCell>
+                    <TableCell etiqueta="Segmento" className="whitespace-nowrap">{ETIQUETA_SEGMENTO[c.segmento]}</TableCell>
                     <TableCell etiqueta="Margen anual">{formatoDinero(c.margenTotal)}</TableCell>
                     <TableCell etiqueta="CLV promedio">{formatoDinero(c.clvPromedio)}</TableCell>
                     <TableCell etiqueta="CLV total">{formatoDinero(c.clvTotal)}</TableCell>

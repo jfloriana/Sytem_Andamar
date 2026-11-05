@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import type { Prisma } from "@prisma/client";
+import { EncabezadoPagina } from "@/components/encabezado-pagina";
+import { EstadoVacio } from "@/components/estado-vacio";
+import { InsigniaSegmento } from "@/components/insignia-segmento";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { normalizarTelefono } from "@/domain/normalizacion";
 import { filtroCartera } from "@/lib/cartera";
-import { ETIQUETA_ESTADO_CLIENTE, ETIQUETA_SEGMENTO, VARIANTE_ESTADO_CLIENTE } from "@/lib/formato";
+import { ETIQUETA_ESTADO_CLIENTE, VARIANTE_ESTADO_CLIENTE } from "@/lib/formato";
 import { can } from "@/lib/permisos";
 import { prisma } from "@/lib/prisma";
 import { requerir } from "@/lib/sesion";
@@ -61,24 +65,27 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[28px] font-semibold leading-tight">Clientes</h1>
-        <div className="no-imprimir flex flex-wrap gap-2">
-          <Button asChild variant="secondary">
-            <Link href="/clientes/riesgo">Clientes en riesgo</Link>
-          </Button>
-          {can(usuario, "crear", "importacion") ? (
+      <EncabezadoPagina
+        titulo="Clientes"
+        descripcion="Busca, consulta y gestiona las cuentas de tu cartera."
+        acciones={
+          <>
             <Button asChild variant="secondary">
-              <Link href="/clientes/importar">Importar CSV</Link>
+              <Link href="/clientes/riesgo">Clientes en riesgo</Link>
             </Button>
-          ) : null}
-          {can(usuario, "crear", "cliente") ? (
-            <Button asChild>
-              <Link href="/clientes/nuevo">Nuevo cliente</Link>
-            </Button>
-          ) : null}
-        </div>
-      </div>
+            {can(usuario, "crear", "importacion") ? (
+              <Button asChild variant="secondary">
+                <Link href="/clientes/importar">Importar CSV</Link>
+              </Button>
+            ) : null}
+            {can(usuario, "crear", "cliente") ? (
+              <Button asChild>
+                <Link href="/clientes/nuevo">Nuevo cliente</Link>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       <form method="get" role="search" className="no-imprimir flex flex-wrap items-end gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1 md:max-w-md">
@@ -100,11 +107,11 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
             {q ? ` para «${q}»` : ""}
           </p>
           {clientes.length === 0 ? (
-            <p>
-              {q
-                ? "No hay clientes que coincidan con la búsqueda."
-                : "Aún no hay clientes en tu cartera. Crea el primero con «Nuevo cliente»."}
-            </p>
+            <EstadoVacio
+              icono={Search}
+              texto={q ? "No hay clientes que coincidan con la búsqueda." : "Aún no hay clientes en tu cartera. Crea el primero con «Nuevo cliente»."}
+              accion={q ? { href: "/clientes", etiqueta: "Ver toda la cartera" } : undefined}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -128,7 +135,9 @@ export default async function PaginaClientes({ searchParams }: { searchParams: P
                     <TableCell etiqueta="Documento">{c.documento}</TableCell>
                     <TableCell etiqueta="Teléfono">{c.telefono ?? "-"}</TableCell>
                     <TableCell etiqueta="Vendedor">{c.vendedor.nombre}</TableCell>
-                    <TableCell etiqueta="Segmento">{ETIQUETA_SEGMENTO[c.segmento]}</TableCell>
+                    <TableCell etiqueta="Segmento">
+                      <InsigniaSegmento segmento={c.segmento} />
+                    </TableCell>
                     <TableCell etiqueta="Estado">
                       <Badge variant={VARIANTE_ESTADO_CLIENTE[c.estado]}>{ETIQUETA_ESTADO_CLIENTE[c.estado]}</Badge>
                     </TableCell>

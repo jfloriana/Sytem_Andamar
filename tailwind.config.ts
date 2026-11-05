@@ -27,6 +27,13 @@ const config: Config = {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        canvas: "hsl(var(--canvas))",
+        navy: {
+          DEFAULT: "hsl(var(--navy))",
+          2: "hsl(var(--navy-2))",
+          soft: "hsl(var(--navy-soft))",
+          acento: "hsl(var(--acento-sobre-navy))",
+        },
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
         card: {
@@ -39,7 +46,11 @@ const config: Config = {
         ui: ["var(--font-ui)", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
-      borderRadius: { DEFAULT: "4px", sm: "2px", md: "4px", lg: "4px" },
+      borderRadius: { DEFAULT: "6px", sm: "4px", md: "6px", lg: "8px", xl: "12px", card: "12px" },
+      boxShadow: {
+        card: "0 1px 2px rgba(10, 23, 48, 0.05), 0 1px 3px rgba(10, 23, 48, 0.04)",
+        elevada: "0 4px 14px rgba(10, 23, 48, 0.08), 0 1px 3px rgba(10, 23, 48, 0.06)",
+      },
     },
   },
   plugins: [],
