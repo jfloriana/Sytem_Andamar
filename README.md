@@ -1,6 +1,29 @@
-# CRM-Andamar
+<div align="center">
 
-Sistema de gestión de relaciones con clientes (CRM) para el distribuidor **Andamar**. Centraliza la cartera de clientes, el pipeline comercial, los pedidos y la atención postventa con control de acceso por rol y trazabilidad de cambios.
+# 🤝 CRM-Andamar — Gestión de Clientes, Ventas y Servicio
+
+### Plataforma web para el distribuidor Andamar: cartera de clientes, pipeline comercial, pedidos y atención postventa con SLA, control de acceso por rol y auditoría
+
+[![Repo](https://img.shields.io/badge/REPO-GITHUB-181717?style=for-the-badge&logo=github)](https://github.com/jfloriana/Sytem_Andamar)
+[![Deploy](https://img.shields.io/badge/DEPLOY-VERCEL-000000?style=for-the-badge&logo=vercel)](https://crm-andamar.vercel.app)
+[![Next.js](https://img.shields.io/badge/NEXT.JS-15-000000?style=for-the-badge&logo=nextdotjs)](https://nextjs.org)
+[![React](https://img.shields.io/badge/REACT-19-149ECA?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TYPESCRIPT-STRICT-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![PostgreSQL](https://img.shields.io/badge/POSTGRESQL-SUPABASE-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![Prisma](https://img.shields.io/badge/PRISMA-6-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io)
+[![Tailwind](https://img.shields.io/badge/TAILWIND-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+
+![Roles](https://img.shields.io/badge/Roles-6-1f6feb)
+![Entidades](https://img.shields.io/badge/Entidades-11-0f62fe)
+![Auth](https://img.shields.io/badge/Auth-Auth.js%20v5%20%7C%20JWT-6f42c1)
+![Pruebas unitarias](https://img.shields.io/badge/Vitest-1099%20pruebas-6e9f18)
+![E2E](https://img.shields.io/badge/E2E-Playwright-2ead33)
+![Responsive](https://img.shields.io/badge/UI-Responsive%20%7C%20m%C3%B3vil-0e7490)
+![Fases](https://img.shields.io/badge/Fases-3%20de%205-f59e0b)
+
+</div>
+
+---
 
 ## ¿De qué trata el sistema?
 
