@@ -48,3 +48,22 @@ export const VARIANTE_ESTADO_CASO = {
 
 /** Horas con un decimal y unidad: «5,5 h». */
 export const formatoHoras = (h: number | null) => (h === null ? "-" : `${new Intl.NumberFormat("es-PE", { maximumFractionDigits: 1 }).format(h)} h`);
+
+export const ETIQUETA_FINALIDAD = { SERVICIO: "Servicio", PROMOCIONES: "Promociones", ANALITICA: "Analítica" } as const;
+export const ETIQUETA_CANAL = { TELEFONO: "Teléfono", EMAIL: "Correo", WHATSAPP: "WhatsApp", PRESENCIAL: "Presencial" } as const;
+export const ETIQUETA_TIPO_SOLICITUD = { ACCESO: "Acceso", RECTIFICACION: "Rectificación", SUPRESION: "Supresión" } as const;
+export const ETIQUETA_ESTADO_SOLICITUD = { PENDIENTE: "Pendiente", EN_PROCESO: "En proceso", ATENDIDA: "Atendida", RECHAZADA: "Rechazada" } as const;
+export const ETIQUETA_PLAZO = {
+  EN_PLAZO: "En plazo",
+  POR_VENCER: "Por vencer",
+  VENCIDA: "Vencida",
+  CERRADA_A_TIEMPO: "Cerrada a tiempo",
+  CERRADA_TARDE: "Cerrada fuera de plazo",
+} as const;
+export const VARIANTE_PLAZO = {
+  EN_PLAZO: "default",
+  POR_VENCER: "warning",
+  VENCIDA: "destructive",
+  CERRADA_A_TIEMPO: "success",
+  CERRADA_TARDE: "warning",
+} as const;

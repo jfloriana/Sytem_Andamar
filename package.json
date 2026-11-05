@@ -13,6 +13,7 @@
     "test:e2e:humo": "playwright test tests/e2e/humo-produccion.spec.ts",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "verificar:indicadores": "tsx scripts/verificar-indicadores.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

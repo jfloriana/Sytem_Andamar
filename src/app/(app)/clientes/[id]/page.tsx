@@ -8,13 +8,17 @@ import { calcularClv } from "@/domain/clv";
 import { inicioVentana, margenVentana } from "@/domain/segmentacion";
 import { construirLineaTiempo, type EventoTiempo } from "@/domain/linea-tiempo";
 import { estadoEfectivo } from "@/domain/sla";
-import { CLV } from "@/config";
+import { estaAnonimizado } from "@/domain/anonimizacion";
+import { FINALIDADES, contarEnVentanaSemanal, evaluarContactoPromocional, resumenPorFinalidad } from "@/domain/consentimientos";
+import { CLV, COMUNICACION } from "@/config";
 import { clienteAutorizado, recursoCliente } from "@/lib/clientes";
 import {
+  ETIQUETA_CANAL,
   ETIQUETA_ESTADO_CASO,
   ETIQUETA_ESTADO_CLIENTE,
   ETIQUETA_ESTADO_PEDIDO,
   ETIQUETA_ETAPA,
+  ETIQUETA_FINALIDAD,
   ETIQUETA_PRIORIDAD,
   ETIQUETA_SEGMENTO,
   ETIQUETA_TIPO_ACTIVIDAD,
@@ -30,6 +34,7 @@ import { PEDIDOS_VALIDOS, resumenPedidosCliente } from "@/lib/pedidos";
 import { prisma } from "@/lib/prisma";
 import { requerir } from "@/lib/sesion";
 import { BotonEstadoCliente } from "./boton-estado";
+import { BotonRetirar, FormularioConsentimiento } from "../../cumplimiento/formularios";
 import { ContactosCliente } from "./contactos";
 
 export const metadata: Metadata = { title: "Ficha de cliente" };
@@ -128,7 +133,8 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   // Segmento, margen y CLV: quien lee pedidos o los indicadores de la empresa (p. ej. ADMIN).
   const veSegmento = permisos.pedidos || can(usuario, "ver", "indicadores");
   const where = { clienteId: cliente.id };
-  const [resumen, contactos, pedidos, oportunidades, actividades, casos, consentimientos, margen12m, historico] = await Promise.all([
+  const ahora = new Date();
+  const [resumen, contactos, pedidos, oportunidades, actividades, casos, consentimientos, margen12m, historico, mensajesRecientes] = await Promise.all([
     permisos.pedidos ? resumenPedidosCliente(cliente.id) : null,
     prisma.contacto.findMany({ where, orderBy: [{ principal: "desc" }, { nombre: "asc" }] }),
     permisos.pedidos ? prisma.pedido.findMany({ where, orderBy: { fecha: "desc" }, take: LIMITE }) : [],
@@ -138,16 +144,23 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     permisos.consentimientos ? prisma.consentimiento.findMany({ where, orderBy: { otorgadoAt: "desc" }, take: LIMITE }) : [],
     veSegmento ? resumenMargenVentana(cliente.id) : null,
     veSegmento ? prisma.segmentoHistorico.findMany({ where, orderBy: { mes: "desc" }, take: 12 }) : [],
+    // Regla 6: los mensajes de los últimos 7 días cuentan como comunicaciones promocionales.
+    permisos.consentimientos
+      ? prisma.actividad.findMany({ where: { ...where, tipo: "MENSAJE", fecha: { gt: new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000) } }, select: { fecha: true } })
+      : [],
   ]);
   const clv = margen12m ? calcularClv(margen12m.margen, CLV.retencionReferencia) : null;
 
   const principal = contactos.find((c) => c.principal) ?? null;
   const faltan = camposFaltantes({ ...cliente, contactoPrincipal: principal });
   const puedeEditar = can(usuario, "editar", dueno);
-  const ahora = new Date();
   const activo = cliente.estado !== "INACTIVO";
   const puedeCrear = (tipo: "pedido" | "oportunidad" | "actividad") => activo && can(usuario, "crear", { ...dueno, tipo });
   const puedeEditarContactos = can(usuario, "editar", recursoCliente(cliente, "contacto"));
+  const puedeRetirar = can(usuario, "editar", "consentimiento");
+  const puedeOtorgar = can(usuario, "crear", "consentimiento") && !estaAnonimizado(cliente.documento);
+  const resumenConsent = resumenPorFinalidad(consentimientos, ahora);
+  const contacto = evaluarContactoPromocional(consentimientos, contarEnVentanaSemanal(mensajesRecientes.map((m) => m.fecha), ahora), ahora);
 
   const eventos: EventoTiempo[] = [
     ...pedidos.map((p) => ({ tipo: "pedido" as const, id: p.id, fecha: p.fecha, titulo: `Pedido ${formatoDinero(p.monto.toString())}`, detalle: ETIQUETA_ESTADO_PEDIDO[p.estado] })),
@@ -172,6 +185,7 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
               <span>Documento {cliente.documento}</span>
               <Badge variant={VARIANTE_ESTADO_CLIENTE[cliente.estado]}>{ETIQUETA_ESTADO_CLIENTE[cliente.estado]}</Badge>
               <Badge>{ETIQUETA_SEGMENTO[cliente.segmento]}</Badge>
+              {estaAnonimizado(cliente.documento) ? <Badge variant="warning">Anonimizado</Badge> : null}
             </p>
           </div>
           {puedeEditar ? (
@@ -401,21 +415,58 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
       <Seccion titulo="Consentimientos">
         {!permisos.consentimientos ? (
           <Vacio texto="Tu rol no tiene acceso a los consentimientos." />
-        ) : consentimientos.length === 0 ? (
-          <Vacio texto="Sin consentimientos registrados." />
         ) : (
-          <ul className="divide-y">
-            {consentimientos.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="font-semibold">
-                  {c.finalidad} · {c.canal}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {c.retiradoAt ? `Retirado el ${formatoFecha(c.retiradoAt)}` : `Otorgado el ${formatoFecha(c.otorgadoAt)}`}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <dl className="mb-4 grid gap-4 sm:grid-cols-3">
+              {FINALIDADES.map((f) => (
+                <Dato
+                  key={f}
+                  etiqueta={ETIQUETA_FINALIDAD[f]}
+                  valor={
+                    <Badge variant={resumenConsent[f].estado === "VIGENTE" ? "success" : resumenConsent[f].estado === "RETIRADO" ? "destructive" : "default"}>
+                      {resumenConsent[f].estado === "VIGENTE" ? "Vigente" : resumenConsent[f].estado === "RETIRADO" ? "Retirado" : "Sin registro"}
+                    </Badge>
+                  }
+                />
+              ))}
+            </dl>
+            <p className="mb-3 text-sm" data-testid="contacto-responsable">
+              <span className="font-semibold">Contacto responsable:</span>{" "}
+              {contacto.motivo === "OK"
+                ? `se pueden enviar ${contacto.restantes} comunicación(es) promocional(es) más esta semana (máximo ${COMUNICACION.maxPromocionalesPorSemana}).`
+                : null}
+              {contacto.motivo === "LIMITE_SEMANAL" ? `límite semanal alcanzado (${COMUNICACION.maxPromocionalesPorSemana} de ${COMUNICACION.maxPromocionalesPorSemana}).` : null}
+              {contacto.motivo === "RETIRADO" ? "no se permiten comunicaciones promocionales: el cliente retiró el consentimiento de promociones." : null}
+              {contacto.motivo === "SIN_CONSENTIMIENTO" ? "no se permiten comunicaciones promocionales: no hay consentimiento de promociones." : null}
+            </p>
+            {consentimientos.length === 0 ? (
+              <Vacio texto="Sin consentimientos registrados." />
+            ) : (
+              <ul className="divide-y">
+                {consentimientos.map((c) => (
+                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span className="font-semibold">
+                      {ETIQUETA_FINALIDAD[c.finalidad]} · {ETIQUETA_CANAL[c.canal]}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                      {c.retiradoAt ? `Retirado el ${formatoFecha(c.retiradoAt)}` : `Otorgado el ${formatoFecha(c.otorgadoAt)}`}
+                      {puedeRetirar && !c.retiradoAt ? (
+                        <BotonRetirar consentimientoId={c.id} etiqueta={`${ETIQUETA_FINALIDAD[c.finalidad]} por ${ETIQUETA_CANAL[c.canal]}`} />
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {puedeOtorgar ? <FormularioConsentimiento clienteId={cliente.id} /> : null}
+            {can(usuario, "crear", "solicitud_titular") ? (
+              <div className="no-imprimir mt-3">
+                <Button asChild variant="secondary">
+                  <Link href={`/cumplimiento/solicitudes/nueva?clienteId=${cliente.id}`}>Registrar solicitud del titular</Link>
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </Seccion>
 

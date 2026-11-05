@@ -71,3 +71,18 @@ export const INDICADORES = {
 export const AUDITORIA = {
   porPagina: 50,
 } as const;
+
+/** Derechos del titular de datos (RF-13). Plazos en días hábiles (lunes a viernes), sin feriados. */
+export const CUMPLIMIENTO = {
+  plazoDiasHabiles: { ACCESO: 8, RECTIFICACION: 10, SUPRESION: 10 },
+  /** Una solicitud abierta se marca «por vencer» cuando faltan estas horas o menos para su plazo. */
+  avisoHoras: 48,
+  /** Texto mínimo del motivo de rechazo y de la respuesta al cerrar. */
+  minLongitudResolucion: 5,
+  maxLongitudDetalle: 500,
+  maxLongitudResolucion: 500,
+  maxLongitudPolitica: 20000,
+  porPagina: 25,
+  /** Prefijo del documento que reemplaza al original al anonimizar. */
+  prefijoDocumentoAnonimo: "ANON",
+} as const;

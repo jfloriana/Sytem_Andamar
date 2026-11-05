@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,11 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
           </div>
         </header>
         <main id="contenido" tabIndex={-1} className="flex-1 p-4 outline-none md:p-6">{children}</main>
+        <footer className="no-imprimir border-t px-4 py-3 text-xs">
+          <Link href="/privacidad" className="font-semibold text-primary hover:underline">
+            Política de privacidad
+          </Link>
+        </footer>
       </div>
     </div>
   );

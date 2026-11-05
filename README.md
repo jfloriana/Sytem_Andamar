@@ -16,10 +16,10 @@
 ![Roles](https://img.shields.io/badge/Roles-6-1f6feb)
 ![Entidades](https://img.shields.io/badge/Entidades-11-0f62fe)
 ![Auth](https://img.shields.io/badge/Auth-Auth.js%20v5%20%7C%20JWT-6f42c1)
-![Pruebas unitarias](https://img.shields.io/badge/Vitest-1177%20pruebas-6e9f18)
+![Pruebas unitarias](https://img.shields.io/badge/Vitest-1221%20pruebas-6e9f18)
 ![E2E](https://img.shields.io/badge/E2E-Playwright-2ead33)
 ![Responsive](https://img.shields.io/badge/UI-Responsive%20%7C%20m%C3%B3vil-0e7490)
-![Fases](https://img.shields.io/badge/Fases-4%20de%205-f59e0b)
+![Fases](https://img.shields.io/badge/Fases-5%20de%205-f59e0b)
 
 </div>
 
@@ -79,7 +79,7 @@ El desarrollo se organiza en cinco fases.
 | 2 | Clientes, contactos, vista 360°, detección de duplicados, importación CSV | Completa |
 | 3 | Oportunidades, actividades, pedidos, casos de servicio con SLA | Completa |
 | 4 | Segmentación, clientes en riesgo, valor de vida (CLV), tareas programadas, tablero de indicadores | Completa |
-| 5 | Consentimientos y solicitudes de titulares, semilla completa, guía de aceptación | Pendiente |
+| 5 | Consentimientos y solicitudes de titulares, semilla completa, guía de aceptación | Completa |
 
 ## 2. Funcionalidades
 
@@ -160,7 +160,7 @@ El detalle de la matriz acción × recurso está codificado en `src/lib/permisos
 
 ## 6. Modelo de datos
 
-El esquema (`prisma/schema.prisma`) define once entidades principales: usuarios, clientes, contactos, oportunidades, actividades, pedidos, casos de servicio, registros de auditoría y las entidades de cumplimiento previstas para la fase 5. Las migraciones versionadas están en `prisma/migrations/`.
+El esquema (`prisma/schema.prisma`) define once entidades principales: usuarios, clientes, contactos, oportunidades, actividades, pedidos, casos de servicio, registros de auditoría y las entidades de cumplimiento (consentimientos, solicitudes de titulares y política de privacidad). Las migraciones versionadas están en `prisma/migrations/`.
 
 ## 7. Reglas de negocio
 
@@ -223,7 +223,7 @@ Si la contraseña de la base de datos contiene caracteres especiales, deben codi
 ## 11. Base de datos: migraciones y semilla
 
 - `npm run db:migrate` aplica las migraciones pendientes (`prisma migrate deploy`).
-- `npm run db:seed` carga datos de demostración de forma **idempotente**: un usuario por rol, clientes de ejemplo y datos comerciales y de servicio de muestra.
+- `npm run db:seed` carga datos de demostración de forma **idempotente**: un usuario por rol más usuarios adicionales, unos 600 clientes, 24 meses de pedidos, oportunidades, actividades, casos de servicio y consentimientos de muestra. Termina recalculando segmentos y clientes en riesgo. Tarda un par de minutos con una base en la nube.
 - El archivo `samples/clientes_importacion.csv` contiene 600 filas pensadas para probar la importación, con errores y repetidos intencionales.
 
 ## 12. Scripts disponibles
@@ -305,7 +305,10 @@ Ejecute la prueba de humo: `BASE_URL=https://su-dominio npm run test:e2e:humo`.
 
 - `docs/DISENO.md`: lineamientos visuales.
 - `docs/SUPUESTOS.md`: supuestos asumidos sobre el requerimiento.
-- `docs/capturas/`: capturas de pantalla de las fases implementadas.
+- `docs/INDICADORES.md`: fórmulas y metas de los seis indicadores.
+- `docs/PRIVACIDAD.md`: tratamiento de datos personales, consentimientos y solicitudes de titulares.
+- `docs/ACEPTACION.md`: checklist de aceptación con la evidencia de cada requisito.
+- `docs/capturas/`: capturas de pantalla de las pantallas implementadas.
 
 ## 18. Solución de problemas
 
@@ -319,8 +322,12 @@ Ejecute la prueba de humo: `BASE_URL=https://su-dominio npm run test:e2e:humo`.
 
 ## 19. Hoja de ruta
 
-- **Fase 4:** segmentación de clientes, detección de clientes en riesgo, valor de vida (CLV), tareas programadas protegidas con secreto y tablero de seis indicadores.
-- **Fase 5:** consentimientos y solicitudes de titulares de datos, semilla completa, guía de aceptación y verificación final.
+Las cinco fases están implementadas. Pendientes y mejoras posibles:
+
+- Medir los tiempos de carga de las pantallas contra el criterio de aceptación (menos de 2 s).
+- Automatizar la limpieza guiada de duplicados tras la importación.
+- Calendario de feriados para los plazos de las solicitudes de titulares (hoy se cuentan días hábiles de lunes a viernes).
+- Revisión formal de accesibilidad de las pantallas nuevas.
 
 ---
 

@@ -57,3 +57,7 @@ Ambas exigen `Authorization: Bearer <CRON_SECRET>` (401 en otro caso, incluso si
 ## Exportación
 
 «Exportar CSV» descarga los seis indicadores con meta, línea base y semáforo, la tendencia mensual, la distribución por segmento y el CLV; respeta los filtros y deja `EXPORTAR_INDICADORES` en la auditoría. Las celdas de texto que empiezan con `=`, `+`, `-` o `@` se neutralizan para evitar fórmulas en hojas de cálculo. «Imprimir / guardar PDF» usa la vista imprimible del navegador.
+
+## Verificación independiente
+
+`npm run verificar:indicadores` (`scripts/verificar-indicadores.ts`) recalcula los seis indicadores del período por defecto con SQL directo sobre los datos crudos, sin usar las funciones de `src/domain/`, y los compara con el cálculo del tablero (`src/lib/tablero.ts`). También compara la distribución por segmento y una muestra de 30 clientes (segmento, margen de 12 meses, estado de riesgo y CLV). Es de solo lectura y termina con código 1 si hay cualquier diferencia. Úsalo después de sembrar la base o de recalcular.

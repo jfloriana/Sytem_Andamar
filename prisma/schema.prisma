@@ -114,6 +114,7 @@ model Usuario {
   pedidos       Pedido[]
   casos         Caso[]
   auditorias    AuditLog[]
+  politicas     PoliticaPrivacidad[]
 
   @@index([rol])
 }
@@ -284,6 +285,10 @@ model SolicitudTitular {
   estado       EstadoSolicitudTitular @default(PENDIENTE)
   solicitadaAt DateTime               @default(now())
   atendidaAt   DateTime?
+  /// Lo que pide el titular (p. ej. qué dato rectificar).
+  detalle      String?
+  /// Respuesta o motivo de rechazo al cerrar la solicitud.
+  resolucion   String?
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
 
@@ -307,4 +312,16 @@ model AuditLog {
   @@index([createdAt])
   @@index([entidad, entidadId])
   @@index([usuarioId])
+}
+
+model PoliticaPrivacidad {
+  id        String   @id @default(cuid())
+  /// La versión vigente es la de número más alto; las anteriores quedan como historial.
+  version   Int      @unique
+  contenido String   @db.Text
+  autorId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  autor Usuario @relation(fields: [autorId], references: [id])
 }

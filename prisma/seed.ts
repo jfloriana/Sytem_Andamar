@@ -1,8 +1,12 @@
-// Semilla mínima de la fase 1: un usuario por rol y uno extra para la prueba de bloqueo.
-// La semilla completa (600 clientes, pedidos, casos...) llega en la fase 5.
+// Semilla completa: 21 usuarios, 600 clientes, 24 meses de pedidos, oportunidades, actividades, casos,
+// consentimientos y solicitudes de titulares, más los clientes demo de las pruebas E2E. Idempotente.
 // Uso: SEED_PASSWORD=... npx prisma db seed   (la clave la defines tú; no hay valor por defecto)
+// Termina con el mismo recálculo de las tareas programadas, para que segmentos y riesgo sean coherentes.
 import { Prisma, PrismaClient, type Rol } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { prisma as prismaApp } from "../src/lib/prisma";
+import { recalcularRiesgo, recalcularSegmentos } from "../src/lib/recalculo";
+import { sembrarUsuariosExtra, sembrarVolumen } from "./seed-completo";
 
 const prisma = new PrismaClient();
 
@@ -33,8 +37,11 @@ const CLIENTES: {
   { documento: "20100000005", razonSocial: "Tienda Riesgo Muestra", direccion: "Av. Demo 505, Lima", telefono: "900000005", vendedor: "vendedor@andamar.test", contacto: { nombre: "Carla Demo", telefono: "900000055" } },
 ];
 
-/** Prefijos de documentos que crean las pruebas E2E y la importación de muestra; se borran para poder repetir la suite. */
-const PREFIJOS_DE_PRUEBA = ["E2E", "2099"];
+/**
+ * Prefijos de documentos que crean las pruebas E2E y la importación de muestra; se borran para poder repetir la suite.
+ * «ANON» son los clientes de prueba que la supresión (RF-13) dejó anonimizados.
+ */
+const PREFIJOS_DE_PRUEBA = ["E2E", "2099", "ANON"];
 
 /** Borra lo que cuelga de los clientes (sin cascada) para poder repetir la suite de pruebas. */
 async function borrarDependientes(clientes: Prisma.ClienteWhereInput) {
@@ -75,6 +82,7 @@ async function sembrarFase3() {
   const demo = { documento: { in: CLIENTES.map((c) => c.documento) } };
   await borrarDependientes(demo);
   await prisma.segmentoHistorico.deleteMany({ where: { cliente: demo } });
+  await prisma.consentimiento.deleteMany({ where: { cliente: demo } });
 
   const porDocumento = async (documento: string) => prisma.cliente.findUniqueOrThrow({ where: { documento } });
   const usuario = (email: string) => prisma.usuario.findUniqueOrThrow({ where: { email } });
@@ -122,10 +130,37 @@ async function sembrarFase3() {
     });
   await caso("Demo: Entrega incompleta", hace(48 * HORA), "ALTA"); // vencido sin primera respuesta: se ve ESCALADO
   await caso("Demo: Consulta de precios", hace(HORA), "BAJA"); // dentro del plazo
-  console.log("Sembradas oportunidades, actividades, pedidos y casos demo.");
+  // Consentimientos demo: uno con promociones vigentes (para retirarlas) y otro que ya las retiró.
+  const otorgado = hace(90 * DIA);
+  await prisma.consentimiento.createMany({
+    data: [
+      { clienteId: uno.id, finalidad: "SERVICIO", canal: "TELEFONO", otorgadoAt: otorgado },
+      { clienteId: uno.id, finalidad: "PROMOCIONES", canal: "EMAIL", otorgadoAt: otorgado },
+      { clienteId: dos.id, finalidad: "PROMOCIONES", canal: "WHATSAPP", otorgadoAt: otorgado, retiradoAt: hace(10 * DIA) },
+    ],
+  });
+  console.log("Sembradas oportunidades, actividades, pedidos, casos y consentimientos demo.");
+}
+
+async function contar() {
+  const [usuarios, clientes, contactos, pedidos, oportunidades, actividades, casos, consentimientos, solicitudes, historico, auditoria] = await Promise.all([
+    prisma.usuario.count(),
+    prisma.cliente.count(),
+    prisma.contacto.count(),
+    prisma.pedido.count(),
+    prisma.oportunidad.count(),
+    prisma.actividad.count(),
+    prisma.caso.count(),
+    prisma.consentimiento.count(),
+    prisma.solicitudTitular.count(),
+    prisma.segmentoHistorico.count(),
+    prisma.auditLog.count(),
+  ]);
+  return { usuarios, clientes, contactos, pedidos, oportunidades, actividades, casos, consentimientos, solicitudes, historico, auditoria };
 }
 
 async function main() {
+  const inicio = Date.now();
   const clave = process.env.SEED_PASSWORD;
   if (!clave || clave.length < 10) {
     throw new Error("Define SEED_PASSWORD (mínimo 10 caracteres) en el entorno antes de sembrar.");
@@ -146,9 +181,21 @@ async function main() {
     where: { email: { in: ["vendedor@andamar.test", "bloqueo@andamar.test"] } },
     data: { jefeId: jefe.id },
   });
-  console.log(`Sembrados ${USUARIOS.length} usuarios.`);
+  await sembrarUsuariosExtra(prisma, passwordHash);
+  // Usuarios que crearon corridas anteriores de las pruebas E2E: se desactivan para no distorsionar «usuarios activos».
+  await prisma.usuario.updateMany({ where: { email: { startsWith: "e2e." } }, data: { activo: false } });
+  console.log(`Sembrados ${USUARIOS.length + 14} usuarios.`);
+  // El volumen va primero para que los datos demo queden como los más recientes en las listas ordenadas por fecha.
+  const volumen = await sembrarVolumen(prisma);
+  console.log(`Sembrado el volumen: ${JSON.stringify(volumen)}`);
   await sembrarClientes();
   await sembrarFase3();
+
+  const segmentos = await recalcularSegmentos();
+  const riesgo = await recalcularRiesgo();
+  console.log(`Recálculo: segmentos ${JSON.stringify(segmentos.porSegmento)}; en riesgo ${riesgo.enRiesgo} de ${riesgo.evaluados}.`);
+  console.log(`Filas en la base: ${JSON.stringify(await contar())}`);
+  console.log(`Semilla completa en ${((Date.now() - inicio) / 1000).toFixed(1)} s.`);
 }
 
 main()
@@ -156,4 +203,7 @@ main()
     console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+    await prismaApp.$disconnect();
+  });
