@@ -5,16 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { camposFaltantes } from "@/domain/calidad-datos";
 import { construirLineaTiempo, type EventoTiempo } from "@/domain/linea-tiempo";
+import { estadoEfectivo } from "@/domain/sla";
 import { clienteAutorizado, recursoCliente } from "@/lib/clientes";
 import {
+  ETIQUETA_ESTADO_CASO,
   ETIQUETA_ESTADO_CLIENTE,
+  ETIQUETA_ESTADO_PEDIDO,
+  ETIQUETA_ETAPA,
+  ETIQUETA_PRIORIDAD,
   ETIQUETA_SEGMENTO,
+  ETIQUETA_TIPO_ACTIVIDAD,
+  VARIANTE_ESTADO_CASO,
   VARIANTE_ESTADO_CLIENTE,
+  VARIANTE_ESTADO_PEDIDO,
   formatoDinero,
   formatoFecha,
   formatoFechaHora,
 } from "@/lib/formato";
 import { can } from "@/lib/permisos";
+import { resumenPedidosCliente } from "@/lib/pedidos";
 import { prisma } from "@/lib/prisma";
 import { requerir } from "@/lib/sesion";
 import { BotonEstadoCliente } from "./boton-estado";
@@ -49,13 +58,33 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode })
   );
 }
 
-function Lista({ items }: { items: { id: string; titulo: string; detalle: string; fecha: Date }[] }) {
+interface ItemLista {
+  id: string;
+  titulo: string;
+  detalle: string;
+  fecha: Date;
+  href?: string;
+  insignia?: { texto: string; variante: "default" | "success" | "warning" | "destructive" };
+}
+
+function Lista({ items }: { items: ItemLista[] }) {
   return (
     <ul className="divide-y">
       {items.map((i) => (
-        <li key={i.id} className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2">
-          <span className="min-w-0 font-semibold">{i.titulo}</span>
-          <span className="text-sm text-muted-foreground">{i.detalle}</span>
+        <li key={i.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+          <span className="min-w-0 font-semibold">
+            {i.href ? (
+              <Link href={i.href} className="text-primary hover:underline">
+                {i.titulo}
+              </Link>
+            ) : (
+              i.titulo
+            )}
+          </span>
+          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            {i.detalle}
+            {i.insignia ? <Badge variant={i.insignia.variante}>{i.insignia.texto}</Badge> : null}
+          </span>
           <time className="w-full text-xs text-muted-foreground" dateTime={i.fecha.toISOString()}>
             {formatoFechaHora(i.fecha)}
           </time>
@@ -63,6 +92,10 @@ function Lista({ items }: { items: { id: string; titulo: string; detalle: string
       ))}
     </ul>
   );
+}
+
+function Acciones({ children }: { children: React.ReactNode }) {
+  return <div className="no-imprimir mb-3 flex flex-wrap gap-2">{children}</div>;
 }
 
 export default async function FichaCliente({ params }: { params: Promise<{ id: string }> }) {
@@ -81,7 +114,8 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
     consentimientos: can(usuario, "ver", "consentimiento"),
   };
   const where = { clienteId: cliente.id };
-  const [contactos, pedidos, oportunidades, actividades, casos, consentimientos] = await Promise.all([
+  const [resumen, contactos, pedidos, oportunidades, actividades, casos, consentimientos] = await Promise.all([
+    permisos.pedidos ? resumenPedidosCliente(cliente.id) : null,
     prisma.contacto.findMany({ where, orderBy: [{ principal: "desc" }, { nombre: "asc" }] }),
     permisos.pedidos ? prisma.pedido.findMany({ where, orderBy: { fecha: "desc" }, take: LIMITE }) : [],
     permisos.oportunidades ? prisma.oportunidad.findMany({ where, orderBy: { createdAt: "desc" }, take: LIMITE }) : [],
@@ -93,13 +127,16 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
   const principal = contactos.find((c) => c.principal) ?? null;
   const faltan = camposFaltantes({ ...cliente, contactoPrincipal: principal });
   const puedeEditar = can(usuario, "editar", dueno);
+  const ahora = new Date();
+  const activo = cliente.estado !== "INACTIVO";
+  const puedeCrear = (tipo: "pedido" | "oportunidad" | "actividad") => activo && can(usuario, "crear", { ...dueno, tipo });
   const puedeEditarContactos = can(usuario, "editar", recursoCliente(cliente, "contacto"));
 
   const eventos: EventoTiempo[] = [
-    ...pedidos.map((p) => ({ tipo: "pedido" as const, id: p.id, fecha: p.fecha, titulo: `Pedido ${formatoDinero(p.monto.toString())}`, detalle: p.estado })),
-    ...oportunidades.map((o) => ({ tipo: "oportunidad" as const, id: o.id, fecha: o.createdAt, titulo: `Oportunidad: ${o.titulo}`, detalle: o.etapa })),
-    ...actividades.map((a) => ({ tipo: "actividad" as const, id: a.id, fecha: a.fecha, titulo: `${a.tipo}`, detalle: a.resultado ?? undefined })),
-    ...casos.map((c) => ({ tipo: "caso" as const, id: c.id, fecha: c.aperturaAt, titulo: `Caso: ${c.titulo}`, detalle: c.estado })),
+    ...pedidos.map((p) => ({ tipo: "pedido" as const, id: p.id, fecha: p.fecha, titulo: `Pedido ${formatoDinero(p.monto.toString())}`, detalle: ETIQUETA_ESTADO_PEDIDO[p.estado] })),
+    ...oportunidades.map((o) => ({ tipo: "oportunidad" as const, id: o.id, fecha: o.createdAt, titulo: `Oportunidad: ${o.titulo}`, detalle: ETIQUETA_ETAPA[o.etapa] })),
+    ...actividades.map((a) => ({ tipo: "actividad" as const, id: a.id, fecha: a.fecha, titulo: ETIQUETA_TIPO_ACTIVIDAD[a.tipo], detalle: a.resultado ?? undefined })),
+    ...casos.map((c) => ({ tipo: "caso" as const, id: c.id, fecha: c.aperturaAt, titulo: `Caso: ${c.titulo}`, detalle: ETIQUETA_ESTADO_CASO[estadoEfectivo(c, ahora)] })),
     ...consentimientos.map((c) => ({ tipo: "consentimiento" as const, id: c.id, fecha: c.otorgadoAt, titulo: `Consentimiento ${c.finalidad}`, detalle: c.canal })),
   ];
   const lineaTiempo = construirLineaTiempo(eventos);
@@ -138,6 +175,12 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
           <Dato etiqueta="Correo" valor={cliente.email} />
           <Dato etiqueta="Vendedor" valor={cliente.vendedor.nombre} />
           <Dato etiqueta="Condiciones especiales" valor={cliente.condicionesEspeciales} />
+          {resumen ? (
+            <Dato
+              etiqueta="Último pedido"
+              valor={resumen.ultimoPedidoAt ? formatoFecha(resumen.ultimoPedidoAt) : "Sin pedidos"}
+            />
+          ) : null}
           <Dato
             etiqueta="Calidad de datos"
             valor={
@@ -164,40 +207,130 @@ export default async function FichaCliente({ params }: { params: Promise<{ id: s
       <Seccion titulo="Pedidos">
         {!permisos.pedidos ? (
           <Vacio texto="Tu rol no tiene acceso a los pedidos." />
-        ) : pedidos.length === 0 ? (
-          <Vacio texto="Sin pedidos registrados." />
         ) : (
-          <Lista items={pedidos.map((p) => ({ id: p.id, titulo: formatoDinero(p.monto.toString()), detalle: `Margen ${formatoDinero(p.margen.toString())} · ${p.estado}`, fecha: p.fecha }))} />
+          <>
+            {puedeCrear("pedido") ? (
+              <Acciones>
+                <Button asChild variant="secondary">
+                  <Link href={`/pedidos/nuevo?clienteId=${cliente.id}`}>Registrar pedido</Link>
+                </Button>
+              </Acciones>
+            ) : null}
+            {resumen && resumen.cantidad > 0 ? (
+              <p className="mb-2 text-sm text-muted-foreground">
+                {resumen.cantidad} {resumen.cantidad === 1 ? "pedido" : "pedidos"} · monto {formatoDinero(resumen.monto)} · margen{" "}
+                {formatoDinero(resumen.margen)} (sin pedidos anulados)
+              </p>
+            ) : null}
+            {pedidos.length === 0 ? (
+              <Vacio texto="Sin pedidos registrados." />
+            ) : (
+              <Lista
+                items={pedidos.map((p) => ({
+                  id: p.id,
+                  titulo: formatoDinero(p.monto.toString()),
+                  detalle: `Margen ${formatoDinero(p.margen.toString())}`,
+                  fecha: p.fecha,
+                  insignia: { texto: ETIQUETA_ESTADO_PEDIDO[p.estado], variante: VARIANTE_ESTADO_PEDIDO[p.estado] },
+                }))}
+              />
+            )}
+          </>
         )}
       </Seccion>
 
       <Seccion titulo="Oportunidades">
         {!permisos.oportunidades ? (
           <Vacio texto="Tu rol no tiene acceso a las oportunidades." />
-        ) : oportunidades.length === 0 ? (
-          <Vacio texto="Sin oportunidades registradas." />
         ) : (
-          <Lista items={oportunidades.map((o) => ({ id: o.id, titulo: o.titulo, detalle: `${o.etapa} · ${formatoDinero(o.montoEstimado.toString())}`, fecha: o.createdAt }))} />
+          <>
+            {puedeCrear("oportunidad") ? (
+              <Acciones>
+                <Button asChild variant="secondary">
+                  <Link href={`/oportunidades/nueva?clienteId=${cliente.id}`}>Nueva oportunidad</Link>
+                </Button>
+              </Acciones>
+            ) : null}
+            {oportunidades.length === 0 ? (
+              <Vacio texto="Sin oportunidades registradas." />
+            ) : (
+              <Lista
+                items={oportunidades.map((o) => ({
+                  id: o.id,
+                  titulo: o.titulo,
+                  detalle: formatoDinero(o.montoEstimado.toString()),
+                  fecha: o.createdAt,
+                  href: `/oportunidades/${o.id}`,
+                  insignia: { texto: ETIQUETA_ETAPA[o.etapa], variante: o.etapa === "GANADA" ? "success" : o.etapa === "PERDIDA" ? "destructive" : "default" },
+                }))}
+              />
+            )}
+          </>
         )}
       </Seccion>
 
       <Seccion titulo="Actividades">
         {!permisos.actividades ? (
           <Vacio texto="Tu rol no tiene acceso a las actividades." />
-        ) : actividades.length === 0 ? (
-          <Vacio texto="Sin actividades registradas." />
         ) : (
-          <Lista items={actividades.map((a) => ({ id: a.id, titulo: a.tipo, detalle: a.resultado ?? (a.completada ? "Completada" : "Pendiente"), fecha: a.fecha }))} />
+          <>
+            {puedeCrear("actividad") ? (
+              <Acciones>
+                <Button asChild variant="secondary">
+                  <Link href={`/actividades/nueva?tipo=VISITA&clienteId=${cliente.id}`}>Registrar visita</Link>
+                </Button>
+                <Button asChild variant="secondary">
+                  <Link href={`/actividades/nueva?tipo=TAREA&clienteId=${cliente.id}`}>Nueva tarea</Link>
+                </Button>
+              </Acciones>
+            ) : null}
+            {actividades.length === 0 ? (
+              <Vacio texto="Sin actividades registradas." />
+            ) : (
+              <Lista
+                items={actividades.map((a) => ({
+                  id: a.id,
+                  titulo: ETIQUETA_TIPO_ACTIVIDAD[a.tipo],
+                  detalle: a.resultado ?? (a.completada ? "Completada" : "Pendiente"),
+                  fecha: a.fecha,
+                  insignia: a.completada ? undefined : { texto: "Pendiente", variante: "warning" },
+                }))}
+              />
+            )}
+          </>
         )}
       </Seccion>
 
       <Seccion titulo="Casos">
         {!permisos.casos ? (
           <Vacio texto="Tu rol no tiene acceso a los casos." />
-        ) : casos.length === 0 ? (
-          <Vacio texto="Sin casos de servicio." />
         ) : (
-          <Lista items={casos.map((c) => ({ id: c.id, titulo: c.titulo, detalle: `${c.prioridad} · ${c.estado}`, fecha: c.aperturaAt }))} />
+          <>
+            {activo && can(usuario, "crear", "caso") ? (
+              <Acciones>
+                <Button asChild variant="secondary">
+                  <Link href={`/casos/nuevo?clienteId=${cliente.id}`}>Nuevo caso</Link>
+                </Button>
+              </Acciones>
+            ) : null}
+            {casos.length === 0 ? (
+              <Vacio texto="Sin casos de servicio." />
+            ) : (
+              <Lista
+                items={casos.map((c) => {
+                  const efectivo = estadoEfectivo(c, ahora);
+                  return {
+                    id: c.id,
+                    titulo: c.titulo,
+                    detalle: ETIQUETA_PRIORIDAD[c.prioridad],
+                    fecha: c.aperturaAt,
+                    href: can(usuario, "ver", { tipo: "caso", propietarioId: c.responsableId }) ? `/casos/${c.id}` : undefined,
+                    insignia: { texto: ETIQUETA_ESTADO_CASO[efectivo], variante: VARIANTE_ESTADO_CASO[efectivo] },
+                  };
+                })}
+              />
+            )}
+          </>
         )}
       </Seccion>
 
