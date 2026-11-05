@@ -26,7 +26,7 @@ test.describe("VENDEDOR: pedidos", () => {
     await expect(page.getByText(/sin pedidos anulados/)).not.toContainText("9,999");
 
     await page.goto("/pedidos");
-    const patron = new RegExp(String.raw`US\$\s?` + monto.replace(".", String.raw`\.`));
+    const patron = new RegExp(String.raw`USD\s?` + monto.replace(".", String.raw`\.`));
     const fila = page.getByRole("row").filter({ hasText: patron }).first();
     page.once("dialog", (d) => d.accept());
     await fila.getByRole("button", { name: /^Anular/ }).click();
