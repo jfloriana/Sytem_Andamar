@@ -40,8 +40,15 @@ Base de 4 px: 4, 8, 12, 16, 24, 32, 48. Radios: 4 px (controles y tarjetas), 999
 
 - **Botones:** altura 40 px escritorio / 44 px móvil; primario azul, secundario con borde, destructivo rojo con confirmación previa.
 - **Formularios:** etiqueta arriba, ayuda en gris, error en rojo bajo el campo con `aria-describedby`; validación en línea; botón de envío deshabilitado y con texto «Guardando...» mientras envía.
-- **Tablas:** cabecera `--surface` en 14 px semibold, filas de 44 px, hover sutil, ordenar/filtrar arriba, en móvil se convierten en lista de tarjetas.
+- **Tablas:** cabecera `--surface` en 14 px semibold, filas de 44 px, hover sutil, ordenar/filtrar arriba. En móvil (< 768 px) cada fila es una tarjeta con borde y pares «etiqueta: valor» (`data-label` en `TableCell`); la cabecera queda solo para lectores de pantalla. Sin recortes laterales.
 - **Insignias de estado:** texto + color (p. ej. «En riesgo» rojo, «Activo» verde).
 - **Navegación:** barra lateral fija en escritorio (por rol); en móvil, menú desplegable con botón de 44 px.
 - **Tablero:** tarjetas de indicador con valor, meta, línea base y semáforo; gráficos Recharts en azules (`#0f62fe`, `#4589ff`, `#a6c8ff`) con leyenda y tabla alternativa.
 - **Impresión:** `@media print` oculta menú y botones; fondo blanco.
+
+## Pantallas de clientes (fase 2)
+
+- Lista: buscador arriba (nombre, documento, teléfono), contador con `role="status"`, paginación de 25. Acciones primarias a la derecha del título («Nuevo cliente», «Importar CSV»).
+- Formulario: dos grupos (`fieldset` + `legend`): datos del cliente y contacto principal opcional. Validación en línea al salir del campo con el mismo esquema Zod del servidor; al enviar con errores el foco va al primer campo inválido. El aviso de duplicado es un bloque ámbar con texto («Posible duplicado») y el botón «Guardar de todos modos».
+- Ficha 360: título con insignias de estado y segmento, y secciones en tarjetas: Datos (con calidad de datos), Contactos, Pedidos, Oportunidades, Actividades, Casos, Consentimientos y Línea de tiempo. Cada sección vacía explica por qué está vacía. Acciones destructivas (baja, eliminar contacto) piden confirmación.
+- Importación: tres pasos visibles (archivo, informe, confirmar) con cifras en tarjetas y tablas de errores, duplicados y advertencias.

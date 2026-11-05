@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Browser } from "@playwright/test";
 import { archivoSesion, type RolE2E } from "./helpers";
 
 // Menú esperado por rol (módulos del menú lateral o del menú desplegable en móvil).
@@ -40,5 +40,62 @@ for (const rol of Object.keys(MENU) as RolE2E[]) {
   });
 }
 
-// La prueba "un VENDEDOR no abre clientes ajenos ni por URL directa" se agrega en la fase 2,
-// cuando existe /clientes/[id] y los datos sembrados tienen clientes de varios vendedores.
+
+// Clientes sembrados: "Distribuidora Demo Uno" es de vendedor@ y "Panaderia Ajena Tres" de bloqueo@.
+async function idDeCliente(browser: Browser, baseURL: string | undefined, documento: string): Promise<string> {
+  const contexto = await browser.newContext({ baseURL, storageState: archivoSesion("ADMIN") });
+  const pagina = await contexto.newPage();
+  await pagina.goto(`/clientes?q=${documento}`);
+  const href = await pagina.getByRole("link", { name: /Demo|Ajena/ }).first().getAttribute("href");
+  await contexto.close();
+  expect(href, `cliente ${documento} sembrado`).toMatch(/^\/clientes\//);
+  return href!.split("/").pop()!;
+}
+
+test.describe("carteras de clientes", () => {
+  test.describe("VENDEDOR", () => {
+    test.use({ storageState: archivoSesion("VENDEDOR") });
+
+    test("no abre clientes ajenos ni por URL directa, ni los ve en la lista", async ({ page, browser, baseURL }) => {
+      const ajeno = await idDeCliente(browser, baseURL, "20100000003");
+      await page.goto(`/clientes/${ajeno}`);
+      await expect(page).toHaveURL(/\/sin-permiso/);
+      await page.goto(`/clientes/${ajeno}/editar`);
+      await expect(page).toHaveURL(/\/sin-permiso/);
+
+      await page.goto("/clientes?q=Ajena");
+      await expect(page.getByText("No hay clientes que coincidan con la búsqueda.")).toBeVisible();
+      await page.goto("/clientes?q=Demo Uno");
+      await expect(page.getByRole("link", { name: "Distribuidora Demo Uno" })).toBeVisible();
+    });
+
+    test("abre un cliente propio", async ({ page, browser, baseURL }) => {
+      const propio = await idDeCliente(browser, baseURL, "20100000001");
+      await page.goto(`/clientes/${propio}`);
+      await expect(page.getByRole("heading", { level: 1, name: "Distribuidora Demo Uno" })).toBeVisible();
+    });
+  });
+
+  test.describe("JEFE_VENTAS", () => {
+    test.use({ storageState: archivoSesion("JEFE_VENTAS") });
+    test("ve los clientes de su equipo", async ({ page, browser, baseURL }) => {
+      const ajeno = await idDeCliente(browser, baseURL, "20100000003");
+      await page.goto(`/clientes/${ajeno}`);
+      await expect(page.getByRole("heading", { level: 1, name: "Panaderia Ajena Tres" })).toBeVisible();
+    });
+  });
+
+  test.describe("EJECUTIVO_SERVICIO", () => {
+    test.use({ storageState: archivoSesion("EJECUTIVO_SERVICIO") });
+    test("ve la ficha en solo lectura", async ({ page, browser, baseURL }) => {
+      const id = await idDeCliente(browser, baseURL, "20100000003");
+      await page.goto(`/clientes/${id}`);
+      await expect(page.getByRole("heading", { level: 1, name: "Panaderia Ajena Tres" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Editar" })).toHaveCount(0);
+      await page.goto(`/clientes/${id}/editar`);
+      await expect(page).toHaveURL(/\/sin-permiso/);
+      await page.goto("/clientes/nuevo");
+      await expect(page).toHaveURL(/\/sin-permiso/);
+    });
+  });
+});

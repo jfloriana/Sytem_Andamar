@@ -143,15 +143,15 @@ export default async function PaginaAuditoria({ searchParams }: { searchParams: 
               ) : (
                 registros.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="whitespace-nowrap">
+                    <TableCell etiqueta="Fecha (UTC)" className="whitespace-nowrap">
                       {r.createdAt.toISOString().slice(0, 16).replace("T", " ")}
                     </TableCell>
-                    <TableCell>{r.usuario.nombre}</TableCell>
-                    <TableCell className="font-semibold">{r.accion}</TableCell>
-                    <TableCell>
+                    <TableCell etiqueta="Usuario">{r.usuario.nombre}</TableCell>
+                    <TableCell etiqueta="Acción" className="font-semibold">{r.accion}</TableCell>
+                    <TableCell etiqueta="Entidad">
                       {r.entidad} <span className="text-xs text-muted-foreground">{r.entidadId}</span>
                     </TableCell>
-                    <TableCell className="max-w-xs break-words font-mono text-xs">
+                    <TableCell etiqueta="Detalle" className="max-w-xs break-words font-mono text-xs">
                       {JSON.stringify(r.detalle)}
                     </TableCell>
                   </TableRow>

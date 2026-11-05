@@ -29,9 +29,9 @@ export function FilaUsuario({ usuario }: { usuario: UsuarioFila }) {
 
   return (
     <TableRow>
-      <TableCell className="font-semibold">{usuario.nombre}</TableCell>
-      <TableCell>{usuario.email}</TableCell>
-      <TableCell>
+      <TableCell etiqueta="Nombre" className="font-semibold">{usuario.nombre}</TableCell>
+      <TableCell etiqueta="Correo">{usuario.email}</TableCell>
+      <TableCell etiqueta="Rol">
         <form action={accionRol} className="flex items-center gap-2">
           <input type="hidden" name="usuarioId" value={usuario.id} />
           <Select
@@ -52,11 +52,11 @@ export function FilaUsuario({ usuario }: { usuario: UsuarioFila }) {
           </Button>
         </form>
       </TableCell>
-      <TableCell>{usuario.jefe ?? "-"}</TableCell>
-      <TableCell>
+      <TableCell etiqueta="Jefe">{usuario.jefe ?? "-"}</TableCell>
+      <TableCell etiqueta="Estado">
         <Badge variant={usuario.activo ? "success" : "destructive"}>{usuario.activo ? "Activo" : "Inactivo"}</Badge>
       </TableCell>
-      <TableCell>
+      <TableCell etiqueta="Acciones">
         <form
           action={accionActivo}
           onSubmit={(ev) => {

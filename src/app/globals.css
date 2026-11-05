@@ -77,3 +77,50 @@
     }
   }
 }
+
+@layer components {
+  /* Tablas en móvil: cada fila pasa a ser una tarjeta con "Etiqueta: valor", sin recorte lateral. */
+  @media (max-width: 767px) {
+    .tabla-apilada,
+    .tabla-apilada tbody,
+    .tabla-apilada tr,
+    .tabla-apilada td {
+      display: block;
+      width: 100%;
+    }
+    .tabla-apilada thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+    .tabla-apilada tr {
+      margin-bottom: 12px;
+      border: 1px solid hsl(var(--border));
+      border-radius: 4px;
+    }
+    .tabla-apilada td {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px 12px;
+      height: auto;
+      min-height: 44px;
+      padding: 8px 12px;
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+    .tabla-apilada td[data-label]::before {
+      content: attr(data-label);
+      flex: none;
+      font-weight: 600;
+      text-align: left;
+    }
+    .tabla-apilada td + td {
+      border-top: 1px solid hsl(var(--border));
+    }
+  }
+}
