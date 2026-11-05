@@ -66,3 +66,26 @@ export function CampoSelect({
     </Envoltorio>
   );
 }
+
+/** Área de texto con la misma estructura de etiqueta, ayuda y error que `Campo`. */
+export function CampoTextoLargo({
+  id,
+  etiqueta,
+  ayuda,
+  error,
+  className,
+  ...props
+}: BaseProps & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "id">) {
+  return (
+    <Envoltorio id={id} etiqueta={etiqueta} ayuda={ayuda} error={error} className={className}>
+      <textarea
+        id={id}
+        rows={3}
+        aria-invalid={!!error}
+        aria-describedby={describedBy(id, ayuda, error)}
+        className="flex min-h-20 w-full rounded border border-input bg-background px-3 py-2 text-base aria-[invalid=true]:border-destructive md:text-sm"
+        {...props}
+      />
+    </Envoltorio>
+  );
+}

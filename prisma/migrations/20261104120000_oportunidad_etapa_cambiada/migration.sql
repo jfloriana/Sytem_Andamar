@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Oportunidad" ADD COLUMN "etapaCambiadaAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
